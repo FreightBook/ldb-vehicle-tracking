@@ -127,12 +127,14 @@ export default function SearchAndTripPanel({
       <div className="p-4 sm:p-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#0d5f96] flex items-center justify-center text-white shadow-sm">
-              <Truck className="w-5 h-5" />
-            </div>
+            <img
+              src="/favicon.jpg"
+              alt="SMTS Tracking"
+              className="w-9 h-9 rounded-xl object-contain shadow-sm border border-slate-100"
+            />
             <div>
-              <h1 className="text-lg font-bold text-gray-900 tracking-tight leading-tight">FASTag Location</h1>
-              <p className="text-[11px] text-gray-400">Track vehicle toll crossings</p>
+              <h1 className="text-lg font-bold text-gray-900 tracking-tight leading-tight">SMTS Tracking</h1>
+              <p className="text-[11px] text-gray-400">Real Time Vehicle Tracking</p>
             </div>
           </div>
 

@@ -32,12 +32,14 @@ export default function PasscodeGate({ onAuthorized }) {
     <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-[#0c1626] via-[#132238] to-[#0f2d4a] p-4 font-sans">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-7 border border-slate-100 flex flex-col items-center animate-fadeIn">
         {/* Logo Badge */}
-        <div className="w-16 h-16 rounded-2xl bg-[#0d5f96] flex items-center justify-center text-white shadow-lg shadow-sky-900/30 mb-4">
-          <Truck className="w-8 h-8" />
-        </div>
+        <img
+          src="/favicon.jpg"
+          alt="SMTS Tracking"
+          className="w-20 h-20 rounded-full object-cover shadow-xl shadow-sky-900/30 mb-4 border-2 border-white ring-2 ring-sky-100"
+        />
 
         <h1 className="text-xl font-extrabold text-gray-900 tracking-tight text-center">
-          FASTag Vehicle Tracking
+          SMTS Vehicle Tracking
         </h1>
         <p className="text-xs text-gray-500 mt-1 mb-6 text-center">
           Authorized fleet tracking portal. Please enter your access passcode to continue.
