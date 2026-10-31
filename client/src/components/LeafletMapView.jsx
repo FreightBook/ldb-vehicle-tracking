@@ -11,7 +11,9 @@ import {
   ArrowLeft,
   Eye,
   Menu,
+  FileDown,
 } from 'lucide-react';
+import { exportTruckReportToPdf } from '../utils/pdfExport';
 
 export default function LeafletMapView({
   trip,
@@ -319,8 +321,9 @@ export default function LeafletMapView({
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
       {/* Map Controls on Top Right */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex flex-col">
+      <div className="absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 sm:right-4 z-20 flex flex-col gap-2 pointer-events-auto">
+        {/* Zoom Controls (Desktop only to prevent mobile clutter) */}
+        <div className="hidden sm:flex bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex-col">
           <button
             onClick={handleZoomIn}
             className="w-9 h-9 flex items-center justify-center text-gray-700 hover:bg-gray-100 hover:text-gray-900 border-b border-gray-100 transition"
@@ -337,17 +340,19 @@ export default function LeafletMapView({
           </button>
         </div>
 
+        {/* Fullscreen (Desktop only, not supported on iOS Safari) */}
         <button
           onClick={toggleFullscreen}
-          className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg flex items-center justify-center transition"
+          className="hidden md:flex w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg items-center justify-center transition"
           title="Toggle Fullscreen"
         >
           {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </button>
 
+        {/* Layer toggle */}
         <button
           onClick={toggleLayers}
-          className="w-9 h-9 rounded-xl bg-white hover:bg-gray-100 text-gray-700 shadow-lg border border-gray-200 flex items-center justify-center transition"
+          className="w-9 h-9 rounded-xl bg-white hover:bg-gray-100 text-gray-700 shadow-lg border border-gray-200 flex items-center justify-center transition active:scale-95"
           title={`Switch Map Style (Current: ${
             tileLayerType === 'esri' ? 'Esri Gray Canvas' : 'OpenStreetMap'
           })`}
@@ -355,10 +360,11 @@ export default function LeafletMapView({
           <Layers className="w-4 h-4" />
         </button>
 
+        {/* Timeline trigger on desktop */}
         {trip && (
           <button
             onClick={onOpenTimeline}
-            className="w-9 h-9 rounded-xl bg-[#0d5f96] hover:bg-[#0b5180] text-white shadow-lg flex items-center justify-center transition"
+            className="hidden sm:flex w-9 h-9 rounded-xl bg-[#0d5f96] hover:bg-[#0b5180] text-white shadow-lg items-center justify-center transition"
             title="Open Toll Timeline"
           >
             <Navigation className="w-4 h-4" />
@@ -367,7 +373,7 @@ export default function LeafletMapView({
       </div>
 
       {/* TOP LEFT FLOATING BANNER & MOBILE CONTROLS */}
-      <div className="absolute top-4 left-4 right-16 sm:right-auto z-10 flex flex-wrap items-center gap-2 pointer-events-auto">
+      <div className="absolute top-[max(0.75rem,env(safe-area-inset-top))] left-3 sm:left-4 max-w-[calc(100vw-4.5rem)] sm:max-w-none z-10 flex flex-wrap items-center gap-2 pointer-events-auto">
         {/* Mobile Open Sidebar Button */}
         {onOpenMobileSidebar && (
           <button
@@ -382,23 +388,23 @@ export default function LeafletMapView({
 
         {trip ? (
           // Single Vehicle Focus Banner
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-gray-200 p-2 sm:p-2.5 flex items-center gap-2.5 sm:gap-3">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-gray-200 p-2 sm:p-2.5 flex items-center gap-2 sm:gap-3 max-w-full">
             <button
               onClick={onClearSelection}
-              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg transition active:scale-95"
+              className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-semibold text-xs rounded-lg transition active:scale-95 flex-shrink-0"
               title="Return to view all vehicles on map"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">All Vehicles</span>
             </button>
 
-            <div className="h-6 w-px bg-gray-200"></div>
+            <div className="h-5 sm:h-6 w-px bg-gray-200"></div>
 
-            <div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-xs font-bold text-gray-900">{trip.vehicleNumber}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-gray-900 truncate">{trip.vehicleNumber}</span>
                 <span
-                  className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                  className={`text-[9px] font-bold px-1.5 py-0.2 rounded flex-shrink-0 ${
                     trip.status === 'ACTIVE'
                       ? 'bg-emerald-100 text-emerald-700'
                       : 'bg-gray-100 text-gray-600'
@@ -407,18 +413,18 @@ export default function LeafletMapView({
                   {trip.status}
                 </span>
               </div>
-              <p className="text-[10px] text-gray-500 truncate max-w-[150px] sm:max-w-none">
-                {events.length} Tolls •{' '}
+              <p className="text-[10px] text-gray-500 truncate hidden sm:block">
+                {events.length} Tolls Recorded •{' '}
                 {trip.latestToll?.locName
                   ? `${trip.latestToll.locName}`
-                  : 'Awaiting toll'}
+                  : 'Awaiting toll crossing'}
               </p>
             </div>
           </div>
         ) : (
           // Fleet Overview Banner (All Vehicles Mode)
           <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-gray-200 p-2 sm:p-2.5 px-3 flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center text-[#0d5f96]">
+            <div className="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center text-[#0d5f96] flex-shrink-0">
               <Truck className="w-4 h-4" />
             </div>
             <div>
@@ -436,15 +442,54 @@ export default function LeafletMapView({
         )}
       </div>
 
+      {/* MOBILE BOTTOM CARD: When a vehicle is selected on small screens */}
+      {trip && (
+        <div className="md:hidden absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-3 right-3 z-10 pointer-events-auto">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200 p-3 flex items-center justify-between gap-2.5">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-xs text-gray-900">{trip.vehicleNumber}</span>
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700">
+                  {events.length} tolls
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500 truncate mt-0.5">
+                {trip.latestToll?.locName ? `Latest: ${trip.latestToll.locName}` : 'Awaiting toll crossing'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                onClick={onOpenTimeline}
+                className="py-2 px-3 bg-[#0d5f96] hover:bg-[#0b5180] active:scale-95 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1"
+                title="Open Toll Timeline"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                <span>Timeline</span>
+              </button>
+
+              <button
+                onClick={() => exportTruckReportToPdf(trip, events)}
+                className="py-2 px-2.5 bg-gray-100 hover:bg-gray-200 active:scale-95 text-gray-700 text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1"
+                title="Download PDF"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                <span>PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Bottom Button on Mobile when in Fleet Overview */}
       {!trip && onOpenMobileSidebar && (
-        <div className="md:hidden absolute bottom-5 left-1/2 -translate-x-1/2 z-10 pointer-events-auto">
+        <div className="md:hidden absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-10 pointer-events-auto">
           <button
             onClick={onOpenMobileSidebar}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#0d5f96] hover:bg-[#0b5180] text-white text-xs font-bold rounded-full shadow-2xl active:scale-95 transition border border-white/20 whitespace-nowrap"
+            className="flex items-center gap-2 px-5 py-3 bg-[#0d5f96] hover:bg-[#0b5180] text-white text-xs font-bold rounded-full shadow-2xl active:scale-95 transition border border-white/20 whitespace-nowrap"
           >
             <Truck className="w-4 h-4" />
-            <span>Search & Vehicles ({activeCount || vehiclesWithCoordsCount})</span>
+            <span>Vehicles & Trips ({activeCount || vehiclesWithCoordsCount})</span>
           </button>
         </div>
       )}

@@ -74,10 +74,10 @@ export default function NewTripModal({ isOpen, onClose, onSubmitSuccess, pollInt
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 transform transition-all">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[92dvh] flex flex-col overflow-hidden border border-gray-100 transform transition-all">
         {/* Header */}
-        <div className="bg-[#132238] px-6 py-4 flex items-center justify-between text-white">
+        <div className="bg-[#132238] px-5 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between text-white flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center text-sky-400">
               <Truck className="w-5 h-5" />
@@ -96,7 +96,7 @@ export default function NewTripModal({ isOpen, onClose, onSubmitSuccess, pollInt
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-600" />

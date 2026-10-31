@@ -112,7 +112,7 @@ export default function SearchAndTripPanel({
   return (
     <div
       className={`
-        fixed inset-0 z-50 w-full h-full
+        fixed inset-0 z-50 w-full h-[100dvh] max-h-[100dvh]
         md:static md:w-96 md:h-full
         bg-white border-r border-gray-200 flex flex-col z-30 flex-shrink-0 shadow-2xl md:shadow-sm
         transition-all duration-300 ease-in-out transform
@@ -124,7 +124,7 @@ export default function SearchAndTripPanel({
       `}
     >
       {/* Top Header */}
-      <div className="p-5 pb-3">
+      <div className="p-4 sm:p-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-[#0d5f96] flex items-center justify-center text-white shadow-sm">
@@ -225,7 +225,7 @@ export default function SearchAndTripPanel({
       </div>
 
       {/* Trip List / Empty State */}
-      <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2.5">
+      <div className="flex-1 overflow-y-auto px-3.5 sm:px-4 py-2.5 space-y-3 min-h-0 overscroll-contain">
         {trips.length === 0 ? (
           // Matching Image 2 placeholder
           <div className="h-64 flex flex-col items-center justify-center text-center p-6 text-gray-400">
@@ -334,7 +334,7 @@ export default function SearchAndTripPanel({
                 )}
 
                 {/* Action Buttons */}
-                <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between gap-1 text-[11px]">
+                <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between gap-1.5 text-[11px] flex-wrap sm:flex-nowrap">
                   {/* Timeline button */}
                   <button
                     onClick={(e) => {
@@ -342,7 +342,7 @@ export default function SearchAndTripPanel({
                       onSelectTrip(trip);
                       onOpenTimeline();
                     }}
-                    className="flex-1 py-1 px-2 bg-sky-50 hover:bg-sky-100 text-[#0d5f96] font-semibold rounded-lg flex items-center justify-center gap-1 transition"
+                    className="flex-1 min-h-[34px] py-1 px-2.5 bg-sky-50 hover:bg-sky-100 text-[#0d5f96] font-semibold rounded-lg flex items-center justify-center gap-1 transition active:scale-95"
                     title="View Toll Timeline"
                   >
                     <Navigation className="w-3.5 h-3.5" />
@@ -353,7 +353,7 @@ export default function SearchAndTripPanel({
                   <button
                     onClick={(e) => handleDownloadPdf(trip, e)}
                     disabled={downloadingPdfId === trip._id}
-                    className="py-1 px-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg flex items-center justify-center gap-1 transition disabled:opacity-50"
+                    className="min-h-[34px] py-1 px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg flex items-center justify-center gap-1 transition active:scale-95 disabled:opacity-50"
                     title="Download PDF Report"
                   >
                     <FileDown
@@ -370,7 +370,7 @@ export default function SearchAndTripPanel({
                         onManualPoll(trip._id);
                       }}
                       disabled={isPolling}
-                      className="py-1 px-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition"
+                      className="min-h-[34px] py-1 px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition active:scale-95 flex items-center justify-center"
                       title="Poll LDB Now"
                     >
                       <RefreshCw
@@ -384,7 +384,7 @@ export default function SearchAndTripPanel({
                     <>
                       {confirmEndId === trip._id ? (
                         <div
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-1 min-h-[34px]"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
@@ -392,14 +392,14 @@ export default function SearchAndTripPanel({
                               onEndTrip(trip._id);
                               setConfirmEndId(null);
                             }}
-                            className="px-1.5 py-1 bg-red-600 hover:bg-red-700 text-white font-bold rounded text-[10px]"
+                            className="min-h-[34px] px-2 py-1 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-[10px]"
                             title="Confirm Stop"
                           >
                             Stop?
                           </button>
                           <button
                             onClick={() => setConfirmEndId(null)}
-                            className="px-1 py-1 text-gray-400 hover:text-gray-600 text-[10px]"
+                            className="min-h-[34px] px-2 py-1 text-gray-400 hover:text-gray-600 rounded-lg text-[10px]"
                           >
                             ✕
                           </button>
@@ -410,10 +410,10 @@ export default function SearchAndTripPanel({
                             e.stopPropagation();
                             setConfirmEndId(trip._id);
                           }}
-                          className="py-1 px-2 text-amber-600 hover:bg-amber-50 font-medium rounded-lg transition"
+                          className="min-h-[34px] py-1 px-2 text-amber-600 hover:bg-amber-50 rounded-lg transition active:scale-95 flex items-center justify-center"
                           title="Stop Tracking Trip"
                         >
-                          <StopCircle className="w-3.5 h-3.5" />
+                          <StopCircle className="w-4 h-4" />
                         </button>
                       )}
                     </>
@@ -432,10 +432,10 @@ export default function SearchAndTripPanel({
                           onDeleteTrip(trip._id);
                         }
                       }}
-                      className="py-1 px-1.5 text-gray-400 hover:text-red-600 rounded-lg transition"
+                      className="min-h-[34px] py-1 px-2 text-gray-400 hover:text-red-600 rounded-lg transition active:scale-95 flex items-center justify-center"
                       title="Delete Trip"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -445,8 +445,8 @@ export default function SearchAndTripPanel({
         )}
       </div>
 
-      {/* Footer Info */}
-      <div className="p-2.5 bg-gray-50 border-t border-gray-200 text-[10px] text-gray-500 flex items-center justify-between">
+      {/* Footer Info with safe area for iPhone bar */}
+      <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gray-50 border-t border-gray-200 text-[10px] text-gray-500 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>{pollInterval}s Live Crawler Active</span>

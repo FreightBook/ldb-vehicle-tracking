@@ -173,7 +173,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-gray-100 font-sans relative">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-gray-100 font-sans relative">
       {/* 1. Search & Trip Management Panel */}
       <SearchAndTripPanel
         trips={trips}
