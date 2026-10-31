@@ -14,3 +14,6 @@ services:
         sync: false
       - key: POLL_INTERVAL_SECONDS
         value: "60"
+      - key: LDB_API_URL
+        value: https://ldb.co.in/api/ldbv2/truck/search
+
