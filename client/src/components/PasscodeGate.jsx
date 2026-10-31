@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, ArrowRight, Truck } from 'lucide-react';
+import { ShieldCheck, Lock, ArrowRight, Truck, Eye, EyeOff } from 'lucide-react';
 import { verifyAccessCode, setStoredAccessCode } from '../api/client';
 
 export default function PasscodeGate({ onAuthorized }) {
   const [code, setCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -54,13 +55,26 @@ export default function PasscodeGate({ onAuthorized }) {
               <Lock className="w-4 h-4" />
             </div>
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Enter Access Passcode..."
               value={code}
               onChange={(e) => setCode(e.target.value)}
               autoFocus
-              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d5f96] focus:bg-white transition"
+              className="w-full pl-10 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d5f96] focus:bg-white transition"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-700 transition"
+              title={showPassword ? 'Hide passcode' : 'Show passcode'}
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4 text-gray-600" />
+              ) : (
+                <Eye className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+              )}
+            </button>
           </div>
 
           <button
