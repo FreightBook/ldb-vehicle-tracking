@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, Truck, AlertCircle, Clock, ShieldCheck } from 'lucide-react';
 
-export default function NewTripModal({ isOpen, onClose, onSubmitSuccess }) {
+export default function NewTripModal({ isOpen, onClose, onSubmitSuccess, pollInterval = 60 }) {
   const todayStr = new Date().toISOString().split('T')[0];
 
   const [vehicleNumber, setVehicleNumber] = useState('');
@@ -84,7 +84,7 @@ export default function NewTripModal({ isOpen, onClose, onSubmitSuccess }) {
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Register Vehicle Trip</h2>
-              <p className="text-xs text-gray-300">Start 60-second LDB toll tracking</p>
+              <p className="text-xs text-gray-300">Start {pollInterval}s automated LDB toll tracking</p>
             </div>
           </div>
           <button
@@ -174,7 +174,7 @@ export default function NewTripModal({ isOpen, onClose, onSubmitSuccess }) {
               <span>Automated Trip Lifecycle</span>
             </div>
             <ul className="list-disc list-inside space-y-0.5 text-slate-600 pl-1">
-              <li>Polls LDB every 60 seconds while active</li>
+              <li>Polls LDB every {pollInterval} seconds while active</li>
               <li>Auto-completes at 23:59:50 on the end date</li>
               <li>Manual "End Tracking" button available at any time</li>
               <li>Completed logs auto-purged after 30 days</li>

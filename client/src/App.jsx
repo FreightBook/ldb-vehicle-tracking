@@ -25,6 +25,7 @@ export default function App() {
   const [selectedTripEvents, setSelectedTripEvents] = useState([]);
   const [activeCount, setActiveCount] = useState(0);
   const [pastCount, setPastCount] = useState(0);
+  const [pollInterval, setPollInterval] = useState(60);
   const [isNewTripModalOpen, setIsNewTripModalOpen] = useState(false);
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
@@ -52,6 +53,7 @@ export default function App() {
       setTrips(data.trips || []);
       if (typeof data.activeCount === 'number') setActiveCount(data.activeCount);
       if (typeof data.pastCount === 'number') setPastCount(data.pastCount);
+      if (typeof data.pollIntervalSeconds === 'number') setPollInterval(data.pollIntervalSeconds);
 
       // If a trip was already selected, update its reference
       if (selectedTrip) {
@@ -190,6 +192,7 @@ export default function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         isPolling={isPolling}
+        pollInterval={pollInterval}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
@@ -228,6 +231,7 @@ export default function App() {
         isOpen={isNewTripModalOpen}
         onClose={() => setIsNewTripModalOpen(false)}
         onSubmitSuccess={handleCreateTripSubmit}
+        pollInterval={pollInterval}
       />
 
       {/* Toll Timeline Modal (Matching Image 1 UI) */}
@@ -236,6 +240,7 @@ export default function App() {
         onClose={() => setIsTimelineModalOpen(false)}
         trip={selectedTrip}
         events={selectedTripEvents}
+        pollInterval={pollInterval}
       />
     </div>
   );

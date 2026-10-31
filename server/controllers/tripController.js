@@ -146,7 +146,9 @@ async function getTrips(req, res) {
       Trip.countDocuments(pastFilter),
     ]);
 
-    return res.json({ trips, activeCount, pastCount });
+    const pollIntervalSeconds = parseInt(process.env.POLL_INTERVAL_SECONDS || '60', 10);
+
+    return res.json({ trips, activeCount, pastCount, pollIntervalSeconds });
   } catch (err) {
     console.error(`[getTrips Error] ${err.message}`);
     return res.status(500).json({ error: err.message });

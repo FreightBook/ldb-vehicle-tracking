@@ -31,7 +31,7 @@ function extractDateOnly(timeStr) {
   return parts[0];
 }
 
-export default function TollTimelineModal({ isOpen, onClose, trip, events = [] }) {
+export default function TollTimelineModal({ isOpen, onClose, trip, events = [], pollInterval = 60 }) {
   if (!isOpen || !trip) return null;
 
   // Chronological order: oldest at bottom, newest at top!
@@ -107,7 +107,7 @@ export default function TollTimelineModal({ isOpen, onClose, trip, events = [] }
                 No toll crossing events recorded yet for this trip.
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                The 60-second crawler will automatically record toll plazas as the truck progresses.
+                The {pollInterval}s crawler will automatically record toll plazas as the truck progresses.
               </p>
             </div>
           ) : (

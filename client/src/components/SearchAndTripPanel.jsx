@@ -36,6 +36,7 @@ export default function SearchAndTripPanel({
   searchQuery,
   onSearchChange,
   isPolling,
+  pollInterval = 60,
   isMobileOpen = false,
   onCloseMobile,
 }) {
@@ -59,9 +60,14 @@ export default function SearchAndTripPanel({
   };
 
   const getNextCountdown = (lastPolledAt) => {
-    if (!lastPolledAt) return '~60s';
+    if (!lastPolledAt) return `~${pollInterval}s`;
     const diffSec = Math.floor((now - new Date(lastPolledAt).getTime()) / 1000);
-    const remain = Math.max(0, 60 - (diffSec % 60));
+    const remain = Math.max(0, pollInterval - (diffSec % pollInterval));
+    if (remain >= 60) {
+      const m = Math.floor(remain / 60);
+      const s = remain % 60;
+      return `${m}m ${s}s`;
+    }
     return `${remain}s`;
   };
 
@@ -443,7 +449,7 @@ export default function SearchAndTripPanel({
       <div className="p-2.5 bg-gray-50 border-t border-gray-200 text-[10px] text-gray-500 flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>60s Live Crawler Active</span>
+          <span>{pollInterval}s Live Crawler Active</span>
         </div>
         <span className="text-gray-400">Past retention: 30d</span>
       </div>

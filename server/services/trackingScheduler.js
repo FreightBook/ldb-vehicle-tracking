@@ -219,13 +219,10 @@ function startTrackingScheduler() {
   const intervalSec = parseInt(process.env.POLL_INTERVAL_SECONDS || '60', 10);
   console.log(`[Scheduler] Initialized. Polling interval: ${intervalSec} seconds.`);
 
-  // Node-cron syntax for every X seconds: `*/${intervalSec} * * * * *`
-  // For standard 60 seconds: `* * * * *`
-  const cronExpression = intervalSec === 60 ? '* * * * *' : `*/${intervalSec} * * * * *`;
-
-  cron.schedule(cronExpression, () => {
+  // Interval timer runs every intervalSec seconds
+  setInterval(() => {
     processAllActiveTrips();
-  });
+  }, intervalSec * 1000);
 
   // Run cleanup once every day at 02:00 AM
   cron.schedule('0 2 * * *', () => {
