@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const tripRoutes = require('./routes/tripRoutes');
 const { startTrackingScheduler } = require('./services/trackingScheduler');
+const { startKeepAliveService } = require('./services/keepAlive');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -78,6 +79,7 @@ app.use((req, res, next) => {
 async function startServer() {
   await connectDB();
   startTrackingScheduler();
+  startKeepAliveService();
 
   app.listen(PORT, () => {
     console.log(`=======================================================`);
