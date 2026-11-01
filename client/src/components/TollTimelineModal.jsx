@@ -36,7 +36,7 @@ export default function TollTimelineModal({
   onClose,
   trip,
   events = [],
-  pollInterval = 60,
+  pollInterval = 1800,
 }) {
   if (!isOpen || !trip) return null;
 
@@ -108,7 +108,7 @@ export default function TollTimelineModal({
                 No toll crossing events recorded yet for this trip.
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                The {pollInterval}s crawler will automatically record toll plazas as the truck progresses.
+                The {pollInterval >= 60 ? `${Math.round(pollInterval / 60)}m` : `${pollInterval}s`} crawler will automatically record toll plazas as the truck progresses.
               </p>
             </div>
           ) : (

@@ -58,8 +58,8 @@ MONGODB_URI=mongodb://localhost:27017/ldb_tracker
 # For MongoDB Atlas:
 # MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/ldb_tracker?retryWrites=true&w=majority
 
-# Polling Interval (in seconds)
-POLL_INTERVAL_SECONDS=60
+# Polling Interval (in seconds, default: 1800 = 30 minutes)
+POLL_INTERVAL_SECONDS=1800
 
 # LDB API URL
 LDB_API_URL=https://ldb.co.in/api/ldbv2/truck/search

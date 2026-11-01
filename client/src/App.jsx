@@ -25,7 +25,7 @@ export default function App() {
   const [selectedTripEvents, setSelectedTripEvents] = useState([]);
   const [activeCount, setActiveCount] = useState(0);
   const [pastCount, setPastCount] = useState(0);
-  const [pollInterval, setPollInterval] = useState(60);
+  const [pollInterval, setPollInterval] = useState(1800);
   const [isNewTripModalOpen, setIsNewTripModalOpen] = useState(false);
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
@@ -85,17 +85,32 @@ export default function App() {
     }
   }, [isAuthorized, activeTab, searchQuery]);
 
-  // Periodically refresh trips in background every 10 seconds
+  // Periodically refresh trips in background (optimized for low bandwidth: only when tab is visible)
   useEffect(() => {
     if (!isAuthorized) return;
-    const timer = setInterval(() => {
+
+    const refreshData = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       loadTrips();
       loadAllActiveTrips();
       if (selectedTrip && selectedTrip.status === 'ACTIVE') {
         loadTripDetails(selectedTrip._id);
       }
-    }, 10000);
-    return () => clearInterval(timer);
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refreshData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const timer = setInterval(refreshData, 60000);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [isAuthorized, loadTrips, loadAllActiveTrips, selectedTrip]);
 
   const handleSelectTrip = (trip) => {

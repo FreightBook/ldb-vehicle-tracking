@@ -82,9 +82,10 @@ async function startServer() {
   startKeepAliveService();
 
   app.listen(PORT, () => {
+    const pollSec = parseInt(process.env.POLL_INTERVAL_SECONDS || '1800', 10);
     console.log(`=======================================================`);
     console.log(`🚀 LDB Vehicle Toll Tracking API Server running on port ${PORT}`);
-    console.log(`📡 LDB Polling Interval: ${process.env.POLL_INTERVAL_SECONDS || 60}s`);
+    console.log(`📡 LDB Polling Interval: ${pollSec}s (${Math.round(pollSec / 60)} minutes)`);
     console.log(`🌐 Health endpoint: http://localhost:${PORT}/api/health`);
     console.log(`=======================================================`);
   });

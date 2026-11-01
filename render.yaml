@@ -14,7 +14,7 @@ services:
       - key: APP_ACCESS_CODE
         sync: false
       - key: POLL_INTERVAL_SECONDS
-        value: "60"
+        value: "1800"
       - key: LDB_API_URL
         value: https://ldb.co.in/api/ldbv2/truck/search
 
