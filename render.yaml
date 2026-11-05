@@ -9,6 +9,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=256
       - key: MONGODB_URI
         sync: false
       - key: APP_ACCESS_CODE

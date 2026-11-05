@@ -55,7 +55,7 @@ async function pollTripData(trip) {
         query.locName = ev.locName;
       }
 
-      const existing = await TollEvent.findOne(query);
+      const existing = await TollEvent.findOne(query).select('_id').lean();
 
       if (!existing) {
         try {
@@ -86,9 +86,9 @@ async function pollTripData(trip) {
 
     // Refresh trip aggregate statistics
     const totalCount = await TollEvent.countDocuments({ tripId: trip._id });
-    const latestEvent = await TollEvent.findOne({ tripId: trip._id }).sort({
-      eventTimestamp: -1,
-    });
+    const latestEvent = await TollEvent.findOne({ tripId: trip._id })
+      .sort({ eventTimestamp: -1 })
+      .lean();
 
     trip.totalTolls = totalCount;
     if (latestEvent) {
@@ -187,7 +187,9 @@ async function cleanupOldTripsAndOrphans() {
     const pastTrips = await Trip.find({
       status: 'COMPLETED',
       endedAt: { $lt: thirtyDaysAgo },
-    });
+    })
+      .select('_id vehicleNumber endedAt')
+      .lean();
 
     for (const trip of pastTrips) {
       console.log(

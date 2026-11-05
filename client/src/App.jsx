@@ -36,21 +36,25 @@ export default function App() {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Load ALL active trips for the fleet overview map (unfiltered)
+  // Load ALL active trips for the fleet overview map (unfiltered, skip if already loaded by loadTrips)
   const loadAllActiveTrips = useCallback(async () => {
+    if (activeTab === 'ACTIVE' && !searchQuery) return;
     try {
       const data = await fetchTrips('ACTIVE', '');
       setAllActiveTrips(data.trips || []);
     } catch (err) {
       console.error('Failed to load all active trips:', err);
     }
-  }, []);
+  }, [activeTab, searchQuery]);
 
   // Load trips list (filtered by tab and search)
   const loadTrips = useCallback(async () => {
     try {
       const data = await fetchTrips(activeTab, searchQuery);
       setTrips(data.trips || []);
+      if (activeTab === 'ACTIVE' && !searchQuery) {
+        setAllActiveTrips(data.trips || []);
+      }
       if (typeof data.activeCount === 'number') setActiveCount(data.activeCount);
       if (typeof data.pastCount === 'number') setPastCount(data.pastCount);
       if (typeof data.pollIntervalSeconds === 'number') setPollInterval(data.pollIntervalSeconds);

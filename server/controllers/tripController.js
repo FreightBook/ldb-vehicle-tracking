@@ -141,7 +141,7 @@ async function getTrips(req, res) {
     }
 
     const [trips, activeCount, pastCount] = await Promise.all([
-      Trip.find(filter).sort({ createdAt: -1 }),
+      Trip.find(filter).sort({ createdAt: -1 }).lean(),
       Trip.countDocuments(activeFilter),
       Trip.countDocuments(pastFilter),
     ]);
@@ -161,15 +161,15 @@ async function getTrips(req, res) {
  */
 async function getTripById(req, res) {
   try {
-    const trip = await Trip.findById(req.params.id);
+    const trip = await Trip.findById(req.params.id).lean();
     if (!trip) {
       return res.status(404).json({ error: 'Trip not found' });
     }
 
-    // Chronological order: oldest to newest
-    const events = await TollEvent.find({ tripId: trip._id }).sort({
-      eventTimestamp: 1,
-    });
+    // Chronological order: oldest to newest (lean plain object for low memory)
+    const events = await TollEvent.find({ tripId: trip._id })
+      .sort({ eventTimestamp: 1 })
+      .lean();
 
     return res.json({ trip, events });
   } catch (err) {
@@ -196,10 +196,10 @@ async function manualPollTrip(req, res) {
     }
 
     const pollResult = await pollTripData(trip);
-    const updatedTrip = await Trip.findById(trip._id);
-    const events = await TollEvent.find({ tripId: trip._id }).sort({
-      eventTimestamp: 1,
-    });
+    const updatedTrip = await Trip.findById(trip._id).lean();
+    const events = await TollEvent.find({ tripId: trip._id })
+      .sort({ eventTimestamp: 1 })
+      .lean();
 
     return res.json({
       message: 'Vehicle polled successfully',
@@ -272,9 +272,9 @@ async function downloadTripPdf(req, res) {
       return res.status(404).json({ error: 'Trip not found' });
     }
 
-    const events = await TollEvent.find({ tripId: trip._id }).sort({
-      eventTimestamp: 1,
-    });
+    const events = await TollEvent.find({ tripId: trip._id })
+      .sort({ eventTimestamp: 1 })
+      .lean();
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
