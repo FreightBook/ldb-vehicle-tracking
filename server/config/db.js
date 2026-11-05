@@ -76,7 +76,9 @@ const connectDB = async () => {
     connectionPromise = mongoose.connect(uri, {
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
-      maxPoolSize: 10,
+      maxPoolSize: 5,
+      minPoolSize: 0,
+      heartbeatFrequencyMS: 30000,
     });
 
     const conn = await connectionPromise;

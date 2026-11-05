@@ -2,11 +2,15 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const mongoose = require('mongoose');
 const tripRoutes = require('./routes/tripRoutes');
 const connectDB = require('./config/db');
 
 const app = express();
+
+// Enable Gzip/Deflate response compression to minimize outbound bandwidth
+app.use(compression());
 
 // Enable CORS
 app.use(
@@ -77,9 +81,20 @@ app.use(
   tripRoutes
 );
 
-// Serve frontend build in production if available (for Node / Render standalone)
+// Serve frontend build in production with aggressive cache headers for immutable assets
 const clientBuildPath = path.join(__dirname, '../client/dist');
-app.use(express.static(clientBuildPath));
+app.use(
+  express.static(clientBuildPath, {
+    maxAge: '1y',
+    immutable: true,
+    setHeaders: (res, filePath) => {
+      // Never cache index.html so updates to new JS/CSS bundle hashes take effect immediately
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    },
+  })
+);
 
 // Fallback for SPA routing in Node / Render standalone
 app.use((req, res, next) => {

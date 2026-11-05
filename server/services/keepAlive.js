@@ -7,6 +7,11 @@ const axios = require('axios');
  * Render's load balancer registers inbound traffic and resets the 15-minute idle countdown.
  */
 function startKeepAliveService() {
+  if (process.env.DISABLE_KEEP_ALIVE === 'true' || process.env.ENABLE_SELF_PING === 'false') {
+    console.log('[Keep-Alive] Internal self-ping disabled by configuration. Relying on external cron/monitor.');
+    return;
+  }
+
   // Determine public target URL:
   // 1. Explicit KEEP_ALIVE_URL in env
   // 2. Render's built-in RENDER_EXTERNAL_URL (e.g., https://ldb-vehicle-tracking.onrender.com)
@@ -25,7 +30,8 @@ function startKeepAliveService() {
     return;
   }
 
-  const intervalMinutes = parseInt(process.env.KEEP_ALIVE_INTERVAL_MINUTES || '5', 10);
+  // Render sleep threshold is 15 minutes. 12 minutes safely prevents sleep while minimizing outbound bandwidth.
+  const intervalMinutes = parseInt(process.env.KEEP_ALIVE_INTERVAL_MINUTES || '12', 10);
   const intervalMs = intervalMinutes * 60 * 1000;
 
   console.log(`[Keep-Alive] Initialized. Target: ${targetUrl} | Interval: every ${intervalMinutes} minutes.`);
@@ -48,6 +54,7 @@ async function pingTarget(url) {
       timeout: 15000,
       headers: {
         'User-Agent': 'SMTS-KeepAlive-Ping/1.0',
+        'Accept-Encoding': 'gzip, deflate',
       },
     });
     const latency = Date.now() - startTime;
