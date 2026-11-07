@@ -29,6 +29,8 @@ export default function SearchAndTripPanel({
   selectedTripEvents = [],
   onSelectTrip,
   onOpenNewTripModal,
+  onSyncSmts,
+  isSyncingSmts = false,
   onOpenTimeline,
   onManualPoll,
   onEndTrip,
@@ -171,15 +173,28 @@ export default function SearchAndTripPanel({
           </button>
         </div>
 
-        {/* Action: Register New Trip Button */}
-        <div className="mt-3">
+        {/* Action Buttons: Register New Trip & Sync SMTS Slips */}
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             onClick={onOpenNewTripModal}
-            className="w-full py-2 px-3 bg-[#0d5f96] hover:bg-[#0b5180] text-white text-xs font-semibold rounded-xl shadow-sm hover:shadow transition flex items-center justify-center gap-1.5"
+            className="py-2 px-2.5 bg-[#0d5f96] hover:bg-[#0b5180] active:scale-95 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+            title="Manually register a vehicle for tracking"
           >
-            <Plus className="w-4 h-4" />
-            <span>Register New Trip</span>
+            <Plus className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">New Trip</span>
           </button>
+
+          {onSyncSmts && (
+            <button
+              onClick={onSyncSmts}
+              disabled={isSyncingSmts}
+              className="py-2 px-2.5 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 disabled:opacity-60"
+              title="Sync any newly entered loading slips from SMTS automatically"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 flex-shrink-0 ${isSyncingSmts ? 'animate-spin' : ''}`} />
+              <span className="truncate">{isSyncingSmts ? 'Syncing...' : 'Sync Slips'}</span>
+            </button>
+          )}
         </div>
 
         {/* Tabs: Active vs Past */}
@@ -274,17 +289,27 @@ export default function SearchAndTripPanel({
                       </span>
                     )}
                   </div>
-                  <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                      isTripActive
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : trip.status === 'SCHEDULED'
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {trip.status}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {trip.sourceSlipNumber && (
+                      <span
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200"
+                        title={`Imported from SMTS Loading Slip #${trip.sourceSlipNumber}`}
+                      >
+                        Slip #{trip.sourceSlipNumber}
+                      </span>
+                    )}
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        isTripActive
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : trip.status === 'SCHEDULED'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {trip.status}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Route: From -> To */}

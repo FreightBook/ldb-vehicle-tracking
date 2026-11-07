@@ -73,6 +73,14 @@ export default function TollTimelineModal({
                 >
                   {trip.status}
                 </span>
+                {trip.sourceSlipNumber && (
+                  <span
+                    className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/25 text-indigo-200 border border-indigo-400/30 flex-shrink-0"
+                    title={`Imported from SMTS Loading Slip #${trip.sourceSlipNumber}`}
+                  >
+                    Slip #{trip.sourceSlipNumber}
+                  </span>
+                )}
               </div>
               <p className="text-[10px] sm:text-xs text-gray-300 truncate">
                 {trip.origin || trip.destination ? (

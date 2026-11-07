@@ -6,6 +6,7 @@ const compression = require('compression');
 const mongoose = require('mongoose');
 const tripRoutes = require('./routes/tripRoutes');
 const locationRoutes = require('./routes/locationRoutes');
+const integrationRoutes = require('./routes/integrationRoutes');
 const connectDB = require('./config/db');
 
 const app = express();
@@ -68,6 +69,9 @@ app.post('/api/auth/verify-code', (req, res) => {
 
 // Location search and Indian PIN code lookup endpoint
 app.use('/api/locations', locationRoutes);
+
+// SMTS Loading Slip Integration endpoints
+app.use('/api/integrations/smts', integrationRoutes);
 
 // Shield /api/trips with access passcode
 app.use(

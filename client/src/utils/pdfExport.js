@@ -62,7 +62,10 @@ export function exportTruckReportToPdf(trip, events = []) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  doc.text(`Truck Number :  ${trip.vehicleNumber}`, margin + 15, boxY + (hasRoute ? 20 : 26));
+  const truckLabel = trip.sourceSlipNumber
+    ? `Truck Number :  ${trip.vehicleNumber} (Slip #${trip.sourceSlipNumber})`
+    : `Truck Number :  ${trip.vehicleNumber}`;
+  doc.text(truckLabel, margin + 15, boxY + (hasRoute ? 20 : 26));
   doc.text(
     `Container Number :  ${events[0]?.containerNumber || 'N/A'}`,
     pageWidth / 2 + 10,

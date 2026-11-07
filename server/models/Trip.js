@@ -51,6 +51,17 @@ const TripSchema = new mongoose.Schema(
       default: 'ACTIVE',
       index: true,
     },
+    source: {
+      type: String,
+      enum: ['MANUAL', 'SMTS_SLIP'],
+      default: 'MANUAL',
+      index: true,
+    },
+    sourceSlipNumber: {
+      type: Number,
+      default: null,
+      index: true,
+    },
     startedAt: {
       type: Date,
       default: Date.now,

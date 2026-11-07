@@ -12,6 +12,7 @@ import {
   endTrip,
   deleteTrip,
   getStoredAccessCode,
+  syncSmtsSlips,
 } from './api/client';
 
 export default function App() {
@@ -29,11 +30,31 @@ export default function App() {
   const [isNewTripModalOpen, setIsNewTripModalOpen] = useState(false);
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
+  const [isSyncingSmts, setIsSyncingSmts] = useState(false);
   const [notification, setNotification] = useState(null);
 
   const showToast = (message, type = 'info') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleSyncSmts = async () => {
+    setIsSyncingSmts(true);
+    try {
+      const res = await syncSmtsSlips(5);
+      showToast(
+        res.syncedCount > 0
+          ? `Synced ${res.syncedCount} new vehicle(s) from SMTS Loading Slips!`
+          : 'All recent SMTS loading slips are already tracked.',
+        res.syncedCount > 0 ? 'success' : 'info'
+      );
+      await loadTrips();
+      await loadAllActiveTrips();
+    } catch (err) {
+      showToast(err.message || 'Failed to sync with SMTS loading slips', 'error');
+    } finally {
+      setIsSyncingSmts(false);
+    }
   };
 
   // Load ALL active trips for the fleet overview map (unfiltered, skip if already loaded by loadTrips)
@@ -211,6 +232,8 @@ export default function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         isPolling={isPolling}
+        onSyncSmts={handleSyncSmts}
+        isSyncingSmts={isSyncingSmts}
         pollInterval={pollInterval}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}

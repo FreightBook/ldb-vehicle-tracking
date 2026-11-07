@@ -127,6 +127,17 @@ async function processAllActiveTrips() {
   try {
     const now = new Date();
 
+    // 0. Auto-sync any newly entered loading slips from SMTS database
+    try {
+      const { syncSlipsFromSMTS } = require('./smtsSyncService');
+      const syncResult = await syncSlipsFromSMTS({ daysBack: 3 });
+      if (syncResult && syncResult.syncedCount > 0) {
+        console.log(`[Scheduler] Auto-synced ${syncResult.syncedCount} new vehicle(s) from SMTS Loading Slips`);
+      }
+    } catch (e) {
+      console.warn(`[Scheduler] SMTS Slip Sync skipped: ${e.message}`);
+    }
+
     // 1. Activate any scheduled trips whose start date has arrived
     await Trip.updateMany(
       { status: 'SCHEDULED', startDate: { $lte: now } },

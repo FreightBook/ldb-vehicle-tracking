@@ -137,3 +137,24 @@ export async function searchLocations(query) {
   }
   return data.results || [];
 }
+
+export async function syncSmtsSlips(daysBack = 5) {
+  const res = await fetch(`${API_BASE}/integrations/smts/sync`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ daysBack, limit: 40 }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to sync with SMTS loading slips');
+  }
+  return data;
+}
+
+export async function fetchSmtsStatus() {
+  const res = await fetch(`${API_BASE}/integrations/smts/status`, {
+    headers: getHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to fetch SMTS status');
+  return res.json();
+}

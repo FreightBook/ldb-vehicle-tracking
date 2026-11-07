@@ -7,7 +7,7 @@
     "start": "node server/index.js",
     "server": "node server/index.js",
     "client": "npm --prefix client run dev",
-    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,magenta\" \"node server/index.js\" \"npm --prefix client run dev\"",
+    "dev": "node server/scripts/freePorts.js && concurrently -k -n \"BACKEND,FRONTEND\" -c \"blue,magenta\" \"node server/index.js\" \"npm --prefix client run dev\"",
     "build": "npm --prefix client install --include=dev && npm --prefix client run build"
   },
   "dependencies": {
