@@ -5,6 +5,7 @@ const cors = require('cors');
 const compression = require('compression');
 const mongoose = require('mongoose');
 const tripRoutes = require('./routes/tripRoutes');
+const locationRoutes = require('./routes/locationRoutes');
 const connectDB = require('./config/db');
 
 const app = express();
@@ -64,6 +65,9 @@ app.post('/api/auth/verify-code', (req, res) => {
   }
   return res.json({ success: true, message: 'Access granted' });
 });
+
+// Location search and Indian PIN code lookup endpoint
+app.use('/api/locations', locationRoutes);
 
 // Shield /api/trips with access passcode
 app.use(

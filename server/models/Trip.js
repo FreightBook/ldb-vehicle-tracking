@@ -17,6 +17,34 @@ const TripSchema = new mongoose.Schema(
       type: Date,
       required: [true, 'End date is required'],
     },
+    origin: {
+      type: String,
+      trim: true,
+      default: '',
+      index: true,
+    },
+    destination: {
+      type: String,
+      trim: true,
+      default: '',
+      index: true,
+    },
+    originCoords: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+    },
+    destinationCoords: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+    },
+    estimatedDistanceKm: {
+      type: Number,
+      default: null,
+    },
+    suggestedDurationDays: {
+      type: Number,
+      default: null,
+    },
     status: {
       type: String,
       enum: ['ACTIVE', 'SCHEDULED', 'COMPLETED'],

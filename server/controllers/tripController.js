@@ -2,6 +2,7 @@ const Trip = require('../models/Trip');
 const TollEvent = require('../models/TollEvent');
 const { pollTripData } = require('../services/trackingScheduler');
 const { generateTruckReportPDF } = require('../services/pdfGenerator');
+const { resolveLocation } = require('../services/locationService');
 
 /**
  * Normalizes vehicle number by removing spaces and dashes, uppercase
@@ -16,7 +17,17 @@ function cleanVehicleNumber(val) {
  */
 async function createTrip(req, res) {
   try {
-    const { vehicleNumber, startDate, endDate } = req.body;
+    const {
+      vehicleNumber,
+      startDate,
+      endDate,
+      origin,
+      destination,
+      originCoords,
+      destinationCoords,
+      estimatedDistanceKm,
+      suggestedDurationDays,
+    } = req.body;
 
     if (!vehicleNumber) {
       return res.status(400).json({ error: 'Vehicle number is required' });
@@ -86,10 +97,28 @@ async function createTrip(req, res) {
     const isStartToday = start <= new Date();
     const initialStatus = isStartToday ? 'ACTIVE' : 'SCHEDULED';
 
+    let oCoords = originCoords;
+    if ((!oCoords || typeof oCoords.lat !== 'number') && origin) {
+      const resolved = resolveLocation(origin);
+      if (resolved) oCoords = { lat: resolved.lat, lng: resolved.lng };
+    }
+
+    let dCoords = destinationCoords;
+    if ((!dCoords || typeof dCoords.lat !== 'number') && destination) {
+      const resolved = resolveLocation(destination);
+      if (resolved) dCoords = { lat: resolved.lat, lng: resolved.lng };
+    }
+
     const trip = await Trip.create({
       vehicleNumber: cleanedNumber,
       startDate: start,
       endDate: end,
+      origin: origin ? String(origin).trim() : '',
+      destination: destination ? String(destination).trim() : '',
+      originCoords: oCoords || undefined,
+      destinationCoords: dCoords || undefined,
+      estimatedDistanceKm: typeof estimatedDistanceKm === 'number' ? Math.round(estimatedDistanceKm) : null,
+      suggestedDurationDays: typeof suggestedDurationDays === 'number' ? Math.round(suggestedDurationDays) : null,
       status: initialStatus,
       startedAt: isStartToday ? new Date() : null,
       totalTolls: 0,
@@ -128,16 +157,29 @@ async function getTrips(req, res) {
     }
 
     if (search && search.trim()) {
-      filter.vehicleNumber = { $regex: cleanVehicleNumber(search), $options: 'i' };
+      const cleaned = cleanVehicleNumber(search);
+      const text = search.trim();
+      const orQuery = [
+        { vehicleNumber: { $regex: cleaned || text, $options: 'i' } },
+        { origin: { $regex: text, $options: 'i' } },
+        { destination: { $regex: text, $options: 'i' } },
+      ];
+      filter.$or = orQuery;
     }
 
     const activeFilter = { status: { $in: ['ACTIVE', 'SCHEDULED'] } };
     const pastFilter = { status: 'COMPLETED' };
 
     if (search && search.trim()) {
-      const searchRegex = { $regex: cleanVehicleNumber(search), $options: 'i' };
-      activeFilter.vehicleNumber = searchRegex;
-      pastFilter.vehicleNumber = searchRegex;
+      const cleaned = cleanVehicleNumber(search);
+      const text = search.trim();
+      const orQuery = [
+        { vehicleNumber: { $regex: cleaned || text, $options: 'i' } },
+        { origin: { $regex: text, $options: 'i' } },
+        { destination: { $regex: text, $options: 'i' } },
+      ];
+      activeFilter.$or = orQuery;
+      pastFilter.$or = orQuery;
     }
 
     const [trips, activeCount, pastCount] = await Promise.all([
@@ -145,6 +187,24 @@ async function getTrips(req, res) {
       Trip.countDocuments(activeFilter),
       Trip.countDocuments(pastFilter),
     ]);
+
+    // Ensure originCoords and destinationCoords are resolved for all trips
+    for (const t of trips) {
+      if (t.origin && (!t.originCoords || typeof t.originCoords.lat !== 'number')) {
+        const resO = resolveLocation(t.origin);
+        if (resO) {
+          t.originCoords = { lat: resO.lat, lng: resO.lng };
+          Trip.updateOne({ _id: t._id }, { $set: { originCoords: t.originCoords } }).exec();
+        }
+      }
+      if (t.destination && (!t.destinationCoords || typeof t.destinationCoords.lat !== 'number')) {
+        const resD = resolveLocation(t.destination);
+        if (resD) {
+          t.destinationCoords = { lat: resD.lat, lng: resD.lng };
+          Trip.updateOne({ _id: t._id }, { $set: { destinationCoords: t.destinationCoords } }).exec();
+        }
+      }
+    }
 
     const pollIntervalSeconds = parseInt(process.env.POLL_INTERVAL_SECONDS || '1800', 10);
 
@@ -164,6 +224,22 @@ async function getTripById(req, res) {
     const trip = await Trip.findById(req.params.id).lean();
     if (!trip) {
       return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    // Auto-resolve originCoords and destinationCoords if missing
+    if (trip.origin && (!trip.originCoords || typeof trip.originCoords.lat !== 'number')) {
+      const resO = resolveLocation(trip.origin);
+      if (resO) {
+        trip.originCoords = { lat: resO.lat, lng: resO.lng };
+        Trip.updateOne({ _id: trip._id }, { $set: { originCoords: trip.originCoords } }).exec();
+      }
+    }
+    if (trip.destination && (!trip.destinationCoords || typeof trip.destinationCoords.lat !== 'number')) {
+      const resD = resolveLocation(trip.destination);
+      if (resD) {
+        trip.destinationCoords = { lat: resD.lat, lng: resD.lng };
+        Trip.updateOne({ _id: trip._id }, { $set: { destinationCoords: trip.destinationCoords } }).exec();
+      }
     }
 
     // Chronological order: oldest to newest (lean plain object for low memory)

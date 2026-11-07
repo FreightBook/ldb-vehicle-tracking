@@ -75,6 +75,12 @@ export default function TollTimelineModal({
                 </span>
               </div>
               <p className="text-[10px] sm:text-xs text-gray-300 truncate">
+                {trip.origin || trip.destination ? (
+                  <span className="text-sky-300 font-medium">
+                    {trip.origin || 'N/A'} ➔ {trip.destination || 'N/A'}
+                    {trip.estimatedDistanceKm ? ` (~${trip.estimatedDistanceKm} km)` : ''} •{' '}
+                  </span>
+                ) : null}
                 Toll Timeline ({events.length} Recorded)
               </p>
             </div>

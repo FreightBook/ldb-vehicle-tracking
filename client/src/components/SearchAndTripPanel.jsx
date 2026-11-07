@@ -112,9 +112,9 @@ export default function SearchAndTripPanel({
   return (
     <div
       className={`
-        fixed inset-0 z-50 w-full h-[100dvh] max-h-[100dvh]
+        fixed inset-0 z-40 w-full h-[100dvh] max-h-[100dvh]
         md:static md:w-96 md:h-full
-        bg-white border-r border-gray-200 flex flex-col z-30 flex-shrink-0 shadow-2xl md:shadow-sm
+        bg-white border-r border-gray-200 flex flex-col flex-shrink-0 shadow-2xl md:shadow-sm
         transition-all duration-300 ease-in-out transform
         ${
           isMobileOpen
@@ -286,6 +286,21 @@ export default function SearchAndTripPanel({
                     {trip.status}
                   </span>
                 </div>
+
+                {/* Route: From -> To */}
+                {(trip.origin || trip.destination) && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-800 bg-slate-100/80 border border-slate-200/80 px-2 py-1 rounded-lg">
+                    <Navigation className="w-3 h-3 text-sky-600 flex-shrink-0" />
+                    <span className="truncate">
+                      {trip.origin || 'N/A'} <span className="text-gray-400 font-normal">➔</span> {trip.destination || 'N/A'}
+                    </span>
+                    {trip.estimatedDistanceKm && (
+                      <span className="ml-auto text-[10px] font-bold text-emerald-700 flex-shrink-0 bg-white px-1.5 py-0.5 rounded border border-gray-200">
+                        ~{trip.estimatedDistanceKm} km
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Dates */}
                 <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-gray-500">

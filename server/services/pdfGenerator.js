@@ -53,8 +53,9 @@ function generateTruckReportPDF(trip, events, stream) {
     .stroke();
 
   // 4. Truck Info Gray Box
+  const hasRoute = Boolean(trip.origin || trip.destination);
   const boxY = 90;
-  const boxHeight = 46;
+  const boxHeight = hasRoute ? 58 : 46;
 
   doc
     .rect(startX, boxY, contentWidth, boxHeight)
@@ -62,15 +63,23 @@ function generateTruckReportPDF(trip, events, stream) {
 
   // Text inside box
   doc.fillColor('#000000').fontSize(11).font('Helvetica-Bold');
-  doc.text(`Truck Number :  ${trip.vehicleNumber}`, startX + 16, boxY + 16);
+  doc.text(`Truck Number :  ${trip.vehicleNumber}`, startX + 16, boxY + (hasRoute ? 12 : 16));
   doc.text(
     `Container Number :  ${events[0]?.containerNumber || 'N/A'}`,
     startX + contentWidth / 2 + 10,
-    boxY + 16
+    boxY + (hasRoute ? 12 : 16)
   );
 
+  if (hasRoute) {
+    const routeText = `Route :  ${trip.origin || 'N/A'}  ➔  ${trip.destination || 'N/A'}${
+      trip.estimatedDistanceKm ? ` (~${trip.estimatedDistanceKm} km)` : ''
+    }`;
+    doc.fontSize(10).font('Helvetica-Bold');
+    doc.text(routeText, startX + 16, boxY + 34);
+  }
+
   // 5. Section Header
-  const sectionY = 160;
+  const sectionY = hasRoute ? 168 : 160;
   doc.fontSize(14).font('Helvetica-Bold').fillColor('#000000');
   doc.text('Truck Events Details', startX, sectionY, {
     align: 'center',

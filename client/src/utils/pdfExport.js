@@ -53,23 +53,32 @@ export function exportTruckReportToPdf(trip, events = []) {
   doc.line(margin, 70, pageWidth - margin, 70);
 
   // 4. Gray Box for Truck Information (Image 3)
+  const hasRoute = Boolean(trip.origin || trip.destination);
   const boxY = 85;
-  const boxHeight = 44;
+  const boxHeight = hasRoute ? 56 : 44;
   doc.setFillColor(200, 200, 200); // light gray
   doc.rect(margin, boxY, contentWidth, boxHeight, 'FD'); // Fill and Draw border
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  doc.text(`Truck Number :  ${trip.vehicleNumber}`, margin + 15, boxY + 26);
+  doc.text(`Truck Number :  ${trip.vehicleNumber}`, margin + 15, boxY + (hasRoute ? 20 : 26));
   doc.text(
     `Container Number :  ${events[0]?.containerNumber || 'N/A'}`,
     pageWidth / 2 + 10,
-    boxY + 26
+    boxY + (hasRoute ? 20 : 26)
   );
 
+  if (hasRoute) {
+    const routeText = `Route :  ${trip.origin || 'N/A'}  ➔  ${trip.destination || 'N/A'}${
+      trip.estimatedDistanceKm ? ` (~${trip.estimatedDistanceKm} km)` : ''
+    }`;
+    doc.setFontSize(10);
+    doc.text(routeText, margin + 15, boxY + 42);
+  }
+
   // 5. Section Header (Image 3)
-  const sectionY = 160;
+  const sectionY = hasRoute ? 168 : 160;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.text('Truck Events Details', pageWidth / 2, sectionY, { align: 'center' });

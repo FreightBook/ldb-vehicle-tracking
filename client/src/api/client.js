@@ -118,3 +118,22 @@ export function getTripPdfUrl(id) {
   const code = getStoredAccessCode();
   return `${API_BASE}/trips/${id}/pdf${code ? `?code=${encodeURIComponent(code)}` : ''}`;
 }
+
+export async function lookupPincode(pin) {
+  const res = await fetch(`${API_BASE}/locations/pincode/${encodeURIComponent(pin)}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Invalid Indian PIN code');
+  }
+  return data;
+}
+
+export async function searchLocations(query) {
+  if (!query || !query.trim()) return [];
+  const res = await fetch(`${API_BASE}/locations/search?q=${encodeURIComponent(query.trim())}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to search locations');
+  }
+  return data.results || [];
+}

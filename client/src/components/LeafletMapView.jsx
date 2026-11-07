@@ -14,6 +14,20 @@ import {
   FileDown,
 } from 'lucide-react';
 import { exportTruckReportToPdf } from '../utils/pdfExport';
+import { findCity } from '../utils/indianCities';
+
+function getCoords(coordsObj, fallbackQuery) {
+  if (coordsObj && typeof coordsObj.lat === 'number' && typeof coordsObj.lng === 'number') {
+    return [coordsObj.lat, coordsObj.lng];
+  }
+  if (fallbackQuery && typeof fallbackQuery === 'string') {
+    const city = findCity(fallbackQuery);
+    if (city && typeof city.lat === 'number' && typeof city.lng === 'number') {
+      return [city.lat, city.lng];
+    }
+  }
+  return null;
+}
 
 export default function LeafletMapView({
   trip,
@@ -116,85 +130,243 @@ export default function LeafletMapView({
         .filter((e) => typeof e.locLat === 'number' && typeof e.locLong === 'number')
         .sort((a, b) => new Date(a.eventTimestamp) - new Date(b.eventTimestamp));
 
-      if (geoEvents.length === 0) {
-        // Fallback to latest toll coordinates if events array is still loading
-        if (
-          typeof trip.latestToll?.locLat === 'number' &&
-          typeof trip.latestToll?.locLong === 'number'
-        ) {
-          map.setView([trip.latestToll.locLat, trip.latestToll.locLong], 11);
-        } else {
-          map.setView([20.5937, 78.9629], 5);
-        }
-        return;
+      const originCoords = getCoords(trip.originCoords, trip.origin);
+      const destCoords = getCoords(trip.destinationCoords, trip.destination);
+
+      const allBoundsPoints = [];
+
+      // 1. ADD FROM (ORIGIN) MARKER
+      if (originCoords) {
+        allBoundsPoints.push(originCoords);
+        const originShort =
+          (trip.origin || 'Origin')
+            .split(',')[0]
+            .replace(/\(.*?\)/g, '')
+            .trim() || 'Origin';
+
+        const originIconHtml = `
+          <div style="cursor: pointer; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25));">
+            <div style="background: #059669; color: #ffffff; padding: 2.5px 8px; border-radius: 6px; font-weight: 800; font-size: 10px; letter-spacing: 0.3px; white-space: nowrap; box-shadow: 0 3px 6px rgba(0,0,0,0.25); border: 1.5px solid #ffffff; display: flex; align-items: center; gap: 4px;">
+              <span style="background: #ffffff; color: #059669; border-radius: 3px; font-size: 8px; font-weight: 900; padding: 1px 3px;">FROM</span>
+              <span>${originShort}</span>
+            </div>
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: #059669; border: 2.5px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; margin-top: 2px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #059669;"></div>
+          </div>
+        `;
+
+        const originIcon = L.divIcon({
+          className: 'custom-origin-marker',
+          html: originIconHtml,
+          iconSize: [30, 48],
+          iconAnchor: [0, 0],
+        });
+
+        const originMarker = L.marker(originCoords, { icon: originIcon }).addTo(group);
+        originMarker.bindPopup(`
+          <div style="font-family: inherit; font-size: 12px; padding: 4px; min-width: 220px;">
+            <div style="background: #059669; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+              <span>🟢 TRIP ORIGIN (FROM)</span>
+              <span style="font-size: 9px; background: rgba(255,255,255,0.25); padding: 1px 4px; border-radius: 3px;">START</span>
+            </div>
+            <div style="color: #1e293b; font-weight: bold; font-size: 13px; margin-bottom: 3px;">
+              ${trip.origin || 'Trip Origin'}
+            </div>
+            <div style="color: #64748b; font-size: 11px; margin-bottom: 2px;">
+              <strong>Vehicle:</strong> ${trip.vehicleNumber}
+            </div>
+            <div style="font-size: 10px; color: #94a3b8; margin-top: 4px;">
+              GPS: ${originCoords[0].toFixed(5)}, ${originCoords[1].toFixed(5)}
+            </div>
+          </div>
+        `);
       }
 
-      const latLngs = geoEvents.map((e) => [e.locLat, e.locLong]);
+      // 2. ADD TO (DESTINATION) MARKER
+      if (destCoords) {
+        allBoundsPoints.push(destCoords);
+        const destShort =
+          (trip.destination || 'Destination')
+            .split(',')[0]
+            .replace(/\(.*?\)/g, '')
+            .trim() || 'Destination';
 
-      // Route polyline
-      const polyline = L.polyline(latLngs, {
-        color: '#0d5f96',
-        weight: 4,
-        opacity: 0.85,
-        dashArray: '6, 8',
-        lineCap: 'round',
-        lineJoin: 'round',
-      }).addTo(group);
+        const destIconHtml = `
+          <div style="cursor: pointer; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25));">
+            <div style="background: #0284c7; color: #ffffff; padding: 2.5px 8px; border-radius: 6px; font-weight: 800; font-size: 10px; letter-spacing: 0.3px; white-space: nowrap; box-shadow: 0 3px 6px rgba(0,0,0,0.25); border: 1.5px solid #ffffff; display: flex; align-items: center; gap: 4px;">
+              <span style="background: #ffffff; color: #0284c7; border-radius: 3px; font-size: 8px; font-weight: 900; padding: 1px 3px;">TO</span>
+              <span>${destShort}</span>
+            </div>
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: #0284c7; border: 2.5px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; margin-top: 2px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+            </div>
+            <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #0284c7;"></div>
+          </div>
+        `;
 
-      // Toll plaza markers
-      geoEvents.forEach((ev, idx) => {
-        const isLatest = idx === geoEvents.length - 1;
+        const destIcon = L.divIcon({
+          className: 'custom-destination-marker',
+          html: destIconHtml,
+          iconSize: [30, 48],
+          iconAnchor: [0, 0],
+        });
 
-        let iconHtml = '';
-        if (isLatest) {
-          iconHtml = `
-            <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-              <div style="position: absolute; width: 36px; height: 36px; border-radius: 50%; background: rgba(220, 38, 38, 0.4); animation: pulse-ring 2s infinite ease-in-out;"></div>
-              <div style="width: 28px; height: 28px; border-radius: 50%; background: #dc2626; border: 3px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17h4V5H2v12h3m11 0h2a2 2 0 0 0 2-2v-3.5L18 8h-4v9Z"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+        const destMarker = L.marker(destCoords, { icon: destIcon }).addTo(group);
+        destMarker.bindPopup(`
+          <div style="font-family: inherit; font-size: 12px; padding: 4px; min-width: 220px;">
+            <div style="background: #0284c7; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+              <span>🏁 DESTINATION (TO)</span>
+              <span style="font-size: 9px; background: rgba(255,255,255,0.25); padding: 1px 4px; border-radius: 3px;">END</span>
+            </div>
+            <div style="color: #1e293b; font-weight: bold; font-size: 13px; margin-bottom: 3px;">
+              ${trip.destination || 'Trip Destination'}
+            </div>
+            ${
+              trip.estimatedDistanceKm
+                ? `<div style="color: #059669; font-weight: bold; font-size: 11px; margin-bottom: 2px;">Route Distance: ~${trip.estimatedDistanceKm} km</div>`
+                : ''
+            }
+            <div style="font-size: 10px; color: #94a3b8; margin-top: 4px;">
+              GPS: ${destCoords[0].toFixed(5)}, ${destCoords[1].toFixed(5)}
+            </div>
+          </div>
+        `);
+      }
+
+      // 3. TOLL PLAZAS AND CONNECTING ROUTE LINES
+      if (geoEvents.length > 0) {
+        geoEvents.forEach((e) => allBoundsPoints.push([e.locLat, e.locLong]));
+
+        // Segment A: Dashed line from Origin to First Toll
+        if (originCoords) {
+          L.polyline([originCoords, [geoEvents[0].locLat, geoEvents[0].locLong]], {
+            color: '#059669',
+            weight: 3.5,
+            dashArray: '5, 8',
+            opacity: 0.8,
+            lineCap: 'round',
+          }).addTo(group);
+        }
+
+        // Segment B: Solid polyline across recorded toll plazas
+        const tollLatLngs = geoEvents.map((e) => [e.locLat, e.locLong]);
+        L.polyline(tollLatLngs, {
+          color: '#0d5f96',
+          weight: 4.5,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(group);
+
+        // Segment C: Dashed projected line from Latest Toll to Destination
+        if (destCoords) {
+          const lastEvent = geoEvents[geoEvents.length - 1];
+          L.polyline([[lastEvent.locLat, lastEvent.locLong], destCoords], {
+            color: '#0284c7',
+            weight: 3.5,
+            dashArray: '5, 8',
+            opacity: 0.8,
+            lineCap: 'round',
+          }).addTo(group);
+        }
+
+        // Toll Plaza Markers
+        geoEvents.forEach((ev, idx) => {
+          const isLatest = idx === geoEvents.length - 1;
+
+          let iconHtml = '';
+          if (isLatest) {
+            iconHtml = `
+              <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <div style="position: absolute; width: 36px; height: 36px; border-radius: 50%; background: rgba(220, 38, 38, 0.4); animation: pulse-ring 2s infinite ease-in-out;"></div>
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #dc2626; border: 3px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17h4V5H2v12h3m11 0h2a2 2 0 0 0 2-2v-3.5L18 8h-4v9Z"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+                </div>
+              </div>
+            `;
+          } else {
+            iconHtml = `
+              <div style="width: 22px; height: 22px; border-radius: 50%; background: #0d5f96; border: 2px solid #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold; cursor: pointer;">
+                ${idx + 1}
+              </div>
+            `;
+          }
+
+          const customIcon = L.divIcon({
+            className: 'custom-toll-marker',
+            html: iconHtml,
+            iconSize: isLatest ? [36, 36] : [22, 22],
+            iconAnchor: isLatest ? [18, 18] : [11, 11],
+          });
+
+          const marker = L.marker([ev.locLat, ev.locLong], { icon: customIcon }).addTo(group);
+
+          const popupContent = `
+            <div style="font-family: inherit; font-size: 12px; padding: 4px; max-width: 220px;">
+              <div style="background: #0d5f96; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-bottom: 6px; text-transform: uppercase;">
+                ${ev.locName}
+              </div>
+              <div style="color: #475569; margin-bottom: 4px;">
+                <strong>Event:</strong> ${ev.eventName || 'TOLL PLAZA CROSSED'}
+              </div>
+              <div style="color: #dc2626; font-weight: bold; margin-bottom: 4px;">
+                ${ev.eventTime}
+              </div>
+              <div style="font-size: 10px; color: #94a3b8;">
+                GPS: ${ev.locLat.toFixed(5)}, ${ev.locLong.toFixed(5)}
               </div>
             </div>
           `;
-        } else {
-          iconHtml = `
-            <div style="width: 22px; height: 22px; border-radius: 50%; background: #0d5f96; border: 2px solid #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; font-weight: bold; cursor: pointer;">
-              ${idx + 1}
+          marker.bindPopup(popupContent);
+        });
+      } else {
+        // Zero toll events yet (e.g. freshly added vehicle!)
+        if (originCoords && destCoords) {
+          // Draw direct planned corridor from Origin to Destination
+          L.polyline([originCoords, destCoords], {
+            color: '#0d5f96',
+            weight: 3.5,
+            dashArray: '6, 8',
+            opacity: 0.8,
+            lineCap: 'round',
+          }).addTo(group);
+
+          // Place initial truck marker at Origin
+          const waitingIconHtml = `
+            <div style="cursor: pointer; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%);">
+              <div style="background: #132238; color: #ffffff; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 9px; white-space: nowrap; margin-bottom: 2px; border: 1px solid #10b981;">
+                ${trip.vehicleNumber} (Ready)
+              </div>
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: #132238; border: 2px solid #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17h4V5H2v12h3m11 0h2a2 2 0 0 0 2-2v-3.5L18 8h-4v9Z"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+              </div>
             </div>
           `;
+          const waitingIcon = L.divIcon({
+            className: 'waiting-vehicle-marker',
+            html: waitingIconHtml,
+            iconSize: [28, 44],
+            iconAnchor: [0, 0],
+          });
+          L.marker(originCoords, { icon: waitingIcon }).addTo(group);
+        } else if (
+          typeof trip.latestToll?.locLat === 'number' &&
+          typeof trip.latestToll?.locLong === 'number'
+        ) {
+          allBoundsPoints.push([trip.latestToll.locLat, trip.latestToll.locLong]);
         }
+      }
 
-        const customIcon = L.divIcon({
-          className: 'custom-toll-marker',
-          html: iconHtml,
-          iconSize: isLatest ? [36, 36] : [22, 22],
-          iconAnchor: isLatest ? [18, 18] : [11, 11],
-        });
-
-        const marker = L.marker([ev.locLat, ev.locLong], { icon: customIcon }).addTo(group);
-
-        const popupContent = `
-          <div style="font-family: inherit; font-size: 12px; padding: 4px; max-width: 220px;">
-            <div style="background: #0d5f96; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; margin-bottom: 6px; text-transform: uppercase;">
-              ${ev.locName}
-            </div>
-            <div style="color: #475569; margin-bottom: 4px;">
-              <strong>Event:</strong> ${ev.eventName || 'TOLL PLAZA CROSSED'}
-            </div>
-            <div style="color: #dc2626; font-weight: bold; margin-bottom: 4px;">
-              ${ev.eventTime}
-            </div>
-            <div style="font-size: 10px; color: #94a3b8;">
-              GPS: ${ev.locLat.toFixed(5)}, ${ev.locLong.toFixed(5)}
-            </div>
-          </div>
-        `;
-        marker.bindPopup(popupContent);
-      });
-
-      if (latLngs.length === 1) {
-        map.setView(latLngs[0], 11);
+      // Auto-fit bounds to include Origin, all Tolls, and Destination
+      if (allBoundsPoints.length === 1) {
+        map.setView(allBoundsPoints[0], 11);
+      } else if (allBoundsPoints.length > 1) {
+        const bounds = L.latLngBounds(allBoundsPoints);
+        map.fitBounds(bounds, { padding: [70, 70], maxZoom: 13 });
       } else {
-        map.fitBounds(polyline.getBounds(), { padding: [60, 60], maxZoom: 13 });
+        map.setView([20.5937, 78.9629], 5);
       }
       return;
     }
@@ -256,24 +428,36 @@ export default function LeafletMapView({
 
       // Hover / click popup
       const popupHtml = `
-        <div style="font-family: inherit; font-size: 12px; padding: 4px; min-width: 180px;">
+        <div style="font-family: inherit; font-size: 12px; padding: 4px; min-width: 190px;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
             <strong style="font-size: 13px; color: #132238;">${t.vehicleNumber}</strong>
             <span style="font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: ${
               isLive ? '#d1fae5; color: #065f46;' : '#f1f5f9; color: #475569;'
             }">${t.status}</span>
           </div>
+          ${
+            t.origin || t.destination
+              ? `<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 6px; margin-bottom: 6px; font-size: 11px;">
+                   <div style="font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                     <span style="color: #059669;">🟢 ${t.origin ? t.origin.split(',')[0].replace(/\(.*?\)/g, '').trim() : 'Start'}</span>
+                     <span style="color: #94a3b8;">➔</span>
+                     <span style="color: #0284c7;">🏁 ${t.destination ? t.destination.split(',')[0].replace(/\(.*?\)/g, '').trim() : 'Dest'}</span>
+                   </div>
+                   ${t.estimatedDistanceKm ? `<div style="font-size: 10px; color: #059669; font-weight: 600; margin-top: 2px;">Route: ~${t.estimatedDistanceKm} km</div>` : ''}
+                 </div>`
+              : ''
+          }
           <div style="color: #475569; font-size: 11px; margin-bottom: 3px;">
             <strong>Latest Toll:</strong> ${t.latestToll.locName || 'N/A'}
           </div>
-          <div style="color: #dc2626; font-size: 11px; font-weight: 600; margin-bottom: 8px;">
+          <div style="color: #dc2626; font-size: 11px; font-weight: 600; margin-bottom: 6px;">
             ${t.latestToll.eventTime || ''}
           </div>
           <div style="font-size: 10px; color: #64748b; margin-bottom: 8px;">
             Total Tolls Recorded: <strong>${t.totalTolls || 0}</strong>
           </div>
           <div style="color: #0d5f96; font-weight: bold; font-size: 11px; cursor: pointer; text-decoration: underline;">
-            Click to Track Route &rarr;
+            Click to Track Full Route &rarr;
           </div>
         </div>
       `;
@@ -401,7 +585,7 @@ export default function LeafletMapView({
             <div className="h-5 sm:h-6 w-px bg-gray-200"></div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs font-bold text-gray-900 truncate">{trip.vehicleNumber}</span>
                 <span
                   className={`text-[9px] font-bold px-1.5 py-0.2 rounded flex-shrink-0 ${
@@ -412,7 +596,25 @@ export default function LeafletMapView({
                 >
                   {trip.status}
                 </span>
+                {trip.estimatedDistanceKm && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex-shrink-0">
+                    ~{trip.estimatedDistanceKm} km
+                  </span>
+                )}
               </div>
+              {(trip.origin || trip.destination) && (
+                <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-slate-700 truncate mt-0.5">
+                  <span className="text-emerald-700 font-semibold flex items-center gap-0.5 truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 flex-shrink-0"></span>
+                    <span className="truncate">{trip.origin ? trip.origin.split(',')[0].replace(/\(.*?\)/g, '').trim() : 'Start'}</span>
+                  </span>
+                  <span className="text-gray-400 flex-shrink-0">➔</span>
+                  <span className="text-sky-700 font-semibold flex items-center gap-0.5 truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-600 flex-shrink-0"></span>
+                    <span className="truncate">{trip.destination ? trip.destination.split(',')[0].replace(/\(.*?\)/g, '').trim() : 'Dest'}</span>
+                  </span>
+                </div>
+              )}
               <p className="text-[10px] text-gray-500 truncate hidden sm:block">
                 {events.length} Tolls Recorded •{' '}
                 {trip.latestToll?.locName
@@ -447,12 +649,24 @@ export default function LeafletMapView({
         <div className="md:hidden absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-3 right-3 z-10 pointer-events-auto">
           <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200 p-3 flex items-center justify-between gap-2.5">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-extrabold text-xs text-gray-900">{trip.vehicleNumber}</span>
                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700">
                   {events.length} tolls
                 </span>
+                {trip.estimatedDistanceKm && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-sky-100 text-sky-800">
+                    ~{trip.estimatedDistanceKm} km
+                  </span>
+                )}
               </div>
+              {(trip.origin || trip.destination) && (
+                <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-800 truncate mt-0.5">
+                  <span className="text-emerald-700 truncate">{trip.origin ? trip.origin.split(',')[0].replace(/\(.*?\)/g, '').trim() : 'Start'}</span>
+                  <span className="text-gray-400">➔</span>
+                  <span className="text-sky-700 truncate">{trip.destination ? trip.destination.split(',')[0].replace(/\(.*?\)/g, '').trim() : 'Dest'}</span>
+                </div>
+              )}
               <p className="text-[10px] text-gray-500 truncate mt-0.5">
                 {trip.latestToll?.locName ? `Latest: ${trip.latestToll.locName}` : 'Awaiting toll crossing'}
               </p>
