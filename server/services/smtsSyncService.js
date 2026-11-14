@@ -96,11 +96,100 @@ function addDays(date, days) {
 }
 
 /**
+ * Determines if a loading slip is an old slip for a stopped vehicle,
+ * or a newly created slip created after tracking was stopped.
+ */
+async function checkIfOldSlipForStoppedVehicle(cleanedVehicleNumber, slip) {
+  const StoppedTracking = require('../models/StoppedTracking');
+  const slipNum = typeof slip.slipNumber === 'number' ? slip.slipNumber : null;
+  const slipCreated = slip.createdAt
+    ? new Date(slip.createdAt)
+    : slip.date
+    ? new Date(slip.date)
+    : null;
+
+  // 1. If this exact slipNumber was already tracked in ANY trip (ACTIVE, SCHEDULED, or COMPLETED)
+  if (slipNum) {
+    const existingTripWithSlip = await Trip.findOne({ sourceSlipNumber: slipNum });
+    if (existingTripWithSlip) {
+      return {
+        isOld: true,
+        reason: `Loading Slip #${slipNum} was already tracked in trip ${existingTripWithSlip._id} (${existingTripWithSlip.status})`,
+      };
+    }
+
+    const stoppedSlip = await StoppedTracking.findOne({ slipNumber: slipNum });
+    if (stoppedSlip) {
+      return {
+        isOld: true,
+        reason: `Loading Slip #${slipNum} was previously ${stoppedSlip.action} by user on ${stoppedSlip.stoppedAt.toISOString()}`,
+      };
+    }
+  }
+
+  // 2. Fetch all stop events and completed trips for this vehicle to determine stop threshold
+  const [stoppedRecords, completedTrips] = await Promise.all([
+    StoppedTracking.find({ vehicleNumber: cleanedVehicleNumber }).sort({ stoppedAt: -1 }).lean(),
+    Trip.find({ vehicleNumber: cleanedVehicleNumber, status: 'COMPLETED' }).sort({ endedAt: -1 }).lean(),
+  ]);
+
+  if (stoppedRecords.length === 0 && completedTrips.length === 0) {
+    // This vehicle has never been stopped or completed -> new vehicle!
+    return { isOld: false };
+  }
+
+  let latestStoppedAt = new Date(0);
+  let maxStoppedSlipNumber = 0;
+
+  for (const rec of stoppedRecords) {
+    if (rec.stoppedAt && new Date(rec.stoppedAt) > latestStoppedAt) {
+      latestStoppedAt = new Date(rec.stoppedAt);
+    }
+    if (typeof rec.slipNumber === 'number' && rec.slipNumber > maxStoppedSlipNumber) {
+      maxStoppedSlipNumber = rec.slipNumber;
+    }
+  }
+
+  for (const trip of completedTrips) {
+    const end = trip.endedAt || trip.updatedAt;
+    if (end && new Date(end) > latestStoppedAt) {
+      latestStoppedAt = new Date(end);
+    }
+    if (typeof trip.sourceSlipNumber === 'number' && trip.sourceSlipNumber > maxStoppedSlipNumber) {
+      maxStoppedSlipNumber = trip.sourceSlipNumber;
+    }
+  }
+
+  // If slip has a slipNumber and maxStoppedSlipNumber is known:
+  if (slipNum && maxStoppedSlipNumber > 0) {
+    if (slipNum <= maxStoppedSlipNumber) {
+      return {
+        isOld: true,
+        reason: `Slip #${slipNum} is an old slip (previous stopped slip for ${cleanedVehicleNumber} was #${maxStoppedSlipNumber})`,
+      };
+    }
+  }
+
+  // If slip creation timestamp is earlier than or equal to when tracking was stopped:
+  if (slipCreated && latestStoppedAt.getTime() > 0) {
+    // 30-second buffer for slight clock differences
+    if (slipCreated.getTime() <= (latestStoppedAt.getTime() + 30000)) {
+      return {
+        isOld: true,
+        reason: `Slip #${slipNum || 'N/A'} was created at ${slipCreated.toISOString()}, which is before/when tracking was stopped (${latestStoppedAt.toISOString()})`,
+      };
+    }
+  }
+
+  // If slipNum > maxStoppedSlipNumber AND slipCreated > latestStoppedAt:
+  // It is a NEW slip created AFTER tracking was stopped!
+  return { isOld: false };
+}
+
+/**
  * Process a single loading slip into an active LDB Trip
  */
 async function processSlipToTrip(slip) {
-  const StoppedTracking = require('../models/StoppedTracking');
-
   const rawTempo = slip.tempoNumber || slip.vehicleNumber;
   if (!rawTempo) return null;
 
@@ -109,18 +198,7 @@ async function processSlipToTrip(slip) {
 
   const slipNum = typeof slip.slipNumber === 'number' ? slip.slipNumber : null;
 
-  // 1. Check if this specific loading slip has ALREADY been tracked in ANY trip (ACTIVE, SCHEDULED, or COMPLETED)
-  if (slipNum) {
-    const existingTripWithSlip = await Trip.findOne({ sourceSlipNumber: slipNum });
-    if (existingTripWithSlip) {
-      console.log(
-        `[SMTS Sync] Loading Slip #${slipNum} (${cleaned}) was already tracked in trip ${existingTripWithSlip._id} (status: ${existingTripWithSlip.status}). Skipping.`
-      );
-      return { status: 'EXISTS', trip: existingTripWithSlip, slipNumber: slipNum };
-    }
-  }
-
-  // 2. Check if this vehicle is currently ACTIVE or SCHEDULED
+  // 1. Check if this vehicle currently has an ACTIVE or SCHEDULED trip
   const existingActive = await Trip.findOne({
     vehicleNumber: cleaned,
     status: { $in: ['ACTIVE', 'SCHEDULED'] },
@@ -130,44 +208,11 @@ async function processSlipToTrip(slip) {
     return { status: 'EXISTS', trip: existingActive, slipNumber: slipNum };
   }
 
-  // 3. Check if this loading slip was previously stopped or deleted by user
-  if (slipNum) {
-    const stoppedSlip = await StoppedTracking.findOne({ slipNumber: slipNum });
-    if (stoppedSlip) {
-      console.log(
-        `[SMTS Sync] Loading Slip #${slipNum} (${cleaned}) was previously ${stoppedSlip.action} by user on ${stoppedSlip.stoppedAt}. Skipping.`
-      );
-      return { status: 'STOPPED_BY_USER', slipNumber: slipNum };
-    }
-  }
-
-  // 4. Check if tracking for this vehicle was stopped or completed recently
-  const slipDate = slip.date ? new Date(slip.date) : (slip.createdAt ? new Date(slip.createdAt) : null);
-
-  const recentStop = await StoppedTracking.findOne({ vehicleNumber: cleaned }).sort({ stoppedAt: -1 });
-  if (recentStop) {
-    // If slip date is older than or concurrent with the user stop action, do not resurrect!
-    if (!slipDate || slipDate <= recentStop.stoppedAt) {
-      console.log(
-        `[SMTS Sync] Vehicle ${cleaned} was stopped by user on ${recentStop.stoppedAt.toISOString()}. Slip #${slipNum || 'N/A'} date is ${slipDate ? slipDate.toISOString() : 'older'}. Skipping.`
-      );
-      return { status: 'STOPPED_BY_USER', slipNumber: slipNum };
-    }
-  }
-
-  // Check any COMPLETED trip for this vehicle
-  const recentCompleted = await Trip.findOne({
-    vehicleNumber: cleaned,
-    status: 'COMPLETED',
-  }).sort({ endedAt: -1 });
-
-  if (recentCompleted && recentCompleted.endedAt) {
-    if (!slipDate || slipDate <= recentCompleted.endedAt) {
-      console.log(
-        `[SMTS Sync] Vehicle ${cleaned} has a COMPLETED trip ended at ${recentCompleted.endedAt.toISOString()}. Slip #${slipNum || 'N/A'} is not newer. Skipping.`
-      );
-      return { status: 'STOPPED_BY_USER', slipNumber: slipNum };
-    }
+  // 2. Check if this is an old slip for a vehicle that was stopped
+  const oldCheck = await checkIfOldSlipForStoppedVehicle(cleaned, slip);
+  if (oldCheck.isOld) {
+    console.log(`[SMTS Sync] Skipping ${cleaned}: ${oldCheck.reason}`);
+    return { status: 'OLD_SLIP_IGNORED', slipNumber: slipNum, reason: oldCheck.reason };
   }
 
   const originText = (slip.loadingLocation || '').trim();
@@ -267,7 +312,7 @@ async function syncSlipsFromSMTS(options = {}) {
       if (res) {
         if (res.status === 'CREATED') {
           createdTrips.push(res.trip);
-        } else if (res.status === 'EXISTS' || res.status === 'STOPPED_BY_USER') {
+        } else if (res.status === 'EXISTS' || res.status === 'OLD_SLIP_IGNORED' || res.status === 'STOPPED_BY_USER') {
           skippedCount++;
         }
       }

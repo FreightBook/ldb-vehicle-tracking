@@ -50,8 +50,8 @@ router.post('/webhook', async (req, res) => {
       message:
         result.status === 'CREATED'
           ? `Vehicle ${vehicleNum} registered for tracking from Slip #${result.slipNumber || 'N/A'}`
-          : result.status === 'STOPPED_BY_USER'
-          ? `Vehicle tracking for Slip #${result.slipNumber || 'N/A'} was previously stopped by user.`
+          : result.status === 'OLD_SLIP_IGNORED' || result.status === 'STOPPED_BY_USER'
+          ? `Vehicle tracking for ${vehicleNum} was previously stopped (old slip #${result.slipNumber || 'N/A'} ignored).`
           : `Vehicle ${vehicleNum} is already being tracked.`,
       trip: result.trip || null,
     });
