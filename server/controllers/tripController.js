@@ -124,6 +124,12 @@ async function createTrip(req, res) {
       totalTolls: 0,
     });
 
+    // Clear any past StoppedTracking exclusion for this vehicle since the user explicitly registered it
+    try {
+      const StoppedTracking = require('../models/StoppedTracking');
+      await StoppedTracking.deleteMany({ vehicleNumber: cleanedNumber });
+    } catch (e) {}
+
     // If active immediately, trigger initial background poll right away
     if (initialStatus === 'ACTIVE') {
       pollTripData(trip).catch((err) => {
@@ -300,11 +306,27 @@ async function endTrip(req, res) {
       return res.status(404).json({ error: 'Trip not found' });
     }
 
+    const now = new Date();
     trip.status = 'COMPLETED';
-    trip.endedAt = new Date();
+    trip.endedAt = now;
+    trip.manuallyStopped = true;
     await trip.save();
 
-    console.log(`[Manual End] Vehicle ${trip.vehicleNumber} tracking stopped by user.`);
+    // Record in StoppedTracking exclusion list so this vehicle / slip is not re-imported
+    try {
+      const StoppedTracking = require('../models/StoppedTracking');
+      await StoppedTracking.create({
+        vehicleNumber: trip.vehicleNumber,
+        slipNumber: trip.sourceSlipNumber || null,
+        action: 'STOPPED',
+        stoppedAt: now,
+        reason: 'User stopped tracking',
+      });
+    } catch (e) {
+      console.error(`[StoppedTracking Error] ${e.message}`);
+    }
+
+    console.log(`[Manual End] Vehicle ${trip.vehicleNumber} (Slip #${trip.sourceSlipNumber || 'N/A'}) tracking stopped by user.`);
 
     return res.json({
       message: 'Tracking stopped successfully',
@@ -325,6 +347,21 @@ async function deleteTrip(req, res) {
     const trip = await Trip.findById(req.params.id);
     if (!trip) {
       return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    const now = new Date();
+    // Record in StoppedTracking exclusion list so deleted slips/vehicles are not re-imported
+    try {
+      const StoppedTracking = require('../models/StoppedTracking');
+      await StoppedTracking.create({
+        vehicleNumber: trip.vehicleNumber,
+        slipNumber: trip.sourceSlipNumber || null,
+        action: 'DELETED',
+        stoppedAt: now,
+        reason: 'User deleted trip',
+      });
+    } catch (e) {
+      console.error(`[StoppedTracking Error] ${e.message}`);
     }
 
     await TollEvent.deleteMany({ tripId: trip._id });

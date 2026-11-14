@@ -62,6 +62,10 @@ const TripSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    manuallyStopped: {
+      type: Boolean,
+      default: false,
+    },
     startedAt: {
       type: Date,
       default: Date.now,

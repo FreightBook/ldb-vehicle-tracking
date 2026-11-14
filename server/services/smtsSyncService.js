@@ -99,20 +99,75 @@ function addDays(date, days) {
  * Process a single loading slip into an active LDB Trip
  */
 async function processSlipToTrip(slip) {
+  const StoppedTracking = require('../models/StoppedTracking');
+
   const rawTempo = slip.tempoNumber || slip.vehicleNumber;
   if (!rawTempo) return null;
 
   const cleaned = cleanVehicleNumber(rawTempo);
   if (cleaned.length < 5) return null;
 
-  // Check if already active or scheduled in LDB
-  const existing = await Trip.findOne({
+  const slipNum = typeof slip.slipNumber === 'number' ? slip.slipNumber : null;
+
+  // 1. Check if this specific loading slip has ALREADY been tracked in ANY trip (ACTIVE, SCHEDULED, or COMPLETED)
+  if (slipNum) {
+    const existingTripWithSlip = await Trip.findOne({ sourceSlipNumber: slipNum });
+    if (existingTripWithSlip) {
+      console.log(
+        `[SMTS Sync] Loading Slip #${slipNum} (${cleaned}) was already tracked in trip ${existingTripWithSlip._id} (status: ${existingTripWithSlip.status}). Skipping.`
+      );
+      return { status: 'EXISTS', trip: existingTripWithSlip, slipNumber: slipNum };
+    }
+  }
+
+  // 2. Check if this vehicle is currently ACTIVE or SCHEDULED
+  const existingActive = await Trip.findOne({
     vehicleNumber: cleaned,
     status: { $in: ['ACTIVE', 'SCHEDULED'] },
   });
 
-  if (existing) {
-    return { status: 'EXISTS', trip: existing, slipNumber: slip.slipNumber };
+  if (existingActive) {
+    return { status: 'EXISTS', trip: existingActive, slipNumber: slipNum };
+  }
+
+  // 3. Check if this loading slip was previously stopped or deleted by user
+  if (slipNum) {
+    const stoppedSlip = await StoppedTracking.findOne({ slipNumber: slipNum });
+    if (stoppedSlip) {
+      console.log(
+        `[SMTS Sync] Loading Slip #${slipNum} (${cleaned}) was previously ${stoppedSlip.action} by user on ${stoppedSlip.stoppedAt}. Skipping.`
+      );
+      return { status: 'STOPPED_BY_USER', slipNumber: slipNum };
+    }
+  }
+
+  // 4. Check if tracking for this vehicle was stopped or completed recently
+  const slipDate = slip.date ? new Date(slip.date) : (slip.createdAt ? new Date(slip.createdAt) : null);
+
+  const recentStop = await StoppedTracking.findOne({ vehicleNumber: cleaned }).sort({ stoppedAt: -1 });
+  if (recentStop) {
+    // If slip date is older than or concurrent with the user stop action, do not resurrect!
+    if (!slipDate || slipDate <= recentStop.stoppedAt) {
+      console.log(
+        `[SMTS Sync] Vehicle ${cleaned} was stopped by user on ${recentStop.stoppedAt.toISOString()}. Slip #${slipNum || 'N/A'} date is ${slipDate ? slipDate.toISOString() : 'older'}. Skipping.`
+      );
+      return { status: 'STOPPED_BY_USER', slipNumber: slipNum };
+    }
+  }
+
+  // Check any COMPLETED trip for this vehicle
+  const recentCompleted = await Trip.findOne({
+    vehicleNumber: cleaned,
+    status: 'COMPLETED',
+  }).sort({ endedAt: -1 });
+
+  if (recentCompleted && recentCompleted.endedAt) {
+    if (!slipDate || slipDate <= recentCompleted.endedAt) {
+      console.log(
+        `[SMTS Sync] Vehicle ${cleaned} has a COMPLETED trip ended at ${recentCompleted.endedAt.toISOString()}. Slip #${slipNum || 'N/A'} is not newer. Skipping.`
+      );
+      return { status: 'STOPPED_BY_USER', slipNumber: slipNum };
+    }
   }
 
   const originText = (slip.loadingLocation || '').trim();
@@ -153,13 +208,13 @@ async function processSlipToTrip(slip) {
     suggestedDurationDays: days || null,
     status: 'ACTIVE',
     source: 'SMTS_SLIP',
-    sourceSlipNumber: typeof slip.slipNumber === 'number' ? slip.slipNumber : null,
+    sourceSlipNumber: slipNum,
     startedAt: new Date(),
     totalTolls: 0,
   });
 
   console.log(
-    `[SMTS Auto-Sync] Auto-registered vehicle ${cleaned} from Loading Slip #${slip.slipNumber || 'N/A'} (${originText} ➔ ${destText}, ~${roadKm || 'N/A'} km, ${days} days)`
+    `[SMTS Auto-Sync] Auto-registered vehicle ${cleaned} from Loading Slip #${slipNum || 'N/A'} (${originText} ➔ ${destText}, ~${roadKm || 'N/A'} km, ${days} days)`
   );
 
   // Trigger immediate initial LDB poll in background
@@ -167,7 +222,7 @@ async function processSlipToTrip(slip) {
     console.error(`[SMTS Initial Poll Error] ${cleaned}: ${err.message}`);
   });
 
-  return { status: 'CREATED', trip: newTrip, slipNumber: slip.slipNumber };
+  return { status: 'CREATED', trip: newTrip, slipNumber: slipNum };
 }
 
 /**
@@ -212,7 +267,7 @@ async function syncSlipsFromSMTS(options = {}) {
       if (res) {
         if (res.status === 'CREATED') {
           createdTrips.push(res.trip);
-        } else if (res.status === 'EXISTS') {
+        } else if (res.status === 'EXISTS' || res.status === 'STOPPED_BY_USER') {
           skippedCount++;
         }
       }

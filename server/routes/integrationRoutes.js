@@ -42,14 +42,18 @@ router.post('/webhook', async (req, res) => {
       return res.status(400).json({ error: 'Invalid vehicle number in loading slip' });
     }
 
-    return res.status(201).json({
+    const vehicleNum = result.trip?.vehicleNumber || slipData.tempoNumber || slipData.vehicleNumber;
+
+    return res.status(200).json({
       success: true,
       status: result.status,
       message:
         result.status === 'CREATED'
-          ? `Vehicle ${result.trip.vehicleNumber} registered for tracking from Slip #${result.slipNumber || 'N/A'}`
-          : `Vehicle ${result.trip.vehicleNumber} is already being tracked.`,
-      trip: result.trip,
+          ? `Vehicle ${vehicleNum} registered for tracking from Slip #${result.slipNumber || 'N/A'}`
+          : result.status === 'STOPPED_BY_USER'
+          ? `Vehicle tracking for Slip #${result.slipNumber || 'N/A'} was previously stopped by user.`
+          : `Vehicle ${vehicleNum} is already being tracked.`,
+      trip: result.trip || null,
     });
   } catch (err) {
     console.error(`[Integration Webhook Error]: ${err.message}`);
