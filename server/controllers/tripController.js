@@ -212,7 +212,7 @@ async function getTrips(req, res) {
       }
     }
 
-    const pollIntervalSeconds = parseInt(process.env.POLL_INTERVAL_SECONDS || '1800', 10);
+    const pollIntervalSeconds = parseInt(process.env.POLL_INTERVAL_SECONDS || '10800', 10);
 
     return res.json({ trips, activeCount, pastCount, pollIntervalSeconds });
   } catch (err) {

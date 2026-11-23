@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { exportTruckReportToPdf } from '../utils/pdfExport';
 import { fetchTripDetails } from '../api/client';
+import { formatPollInterval } from '../utils/formatters';
 
 export default function SearchAndTripPanel({
   trips = [],
@@ -38,7 +39,7 @@ export default function SearchAndTripPanel({
   searchQuery,
   onSearchChange,
   isPolling,
-  pollInterval = 1800,
+  pollInterval = 10800,
   isMobileOpen = false,
   onCloseMobile,
 }) {
@@ -57,14 +58,24 @@ export default function SearchAndTripPanel({
     const diffSec = Math.max(0, Math.floor((now - new Date(lastPolledAt).getTime()) / 1000));
     if (diffSec < 5) return 'Polled just now';
     if (diffSec < 60) return `Polled ${diffSec}s ago`;
+    if (diffSec >= 3600) {
+      const h = Math.floor(diffSec / 3600);
+      const m = Math.floor((diffSec % 3600) / 60);
+      return m > 0 ? `Polled ${h}h ${m}m ago` : `Polled ${h}h ago`;
+    }
     const min = Math.floor(diffSec / 60);
     return `Polled ${min}m ago`;
   };
 
   const getNextCountdown = (lastPolledAt) => {
-    if (!lastPolledAt) return pollInterval >= 60 ? `~${Math.round(pollInterval / 60)}m` : `~${pollInterval}s`;
+    if (!lastPolledAt) return formatPollInterval(pollInterval);
     const diffSec = Math.floor((now - new Date(lastPolledAt).getTime()) / 1000);
     const remain = Math.max(0, pollInterval - (diffSec % pollInterval));
+    if (remain >= 3600) {
+      const h = Math.floor(remain / 3600);
+      const m = Math.floor((remain % 3600) / 60);
+      return `${h}h ${m}m`;
+    }
     if (remain >= 60) {
       const m = Math.floor(remain / 60);
       const s = remain % 60;
@@ -491,7 +502,7 @@ export default function SearchAndTripPanel({
       <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gray-50 border-t border-gray-200 text-[10px] text-gray-500 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>{pollInterval >= 60 ? `${Math.round(pollInterval / 60)}m` : `${pollInterval}s`} Live Crawler Active</span>
+          <span>{formatPollInterval(pollInterval)} Live Crawler Active</span>
         </div>
         <span className="text-gray-400">Past retention: 30d</span>
       </div>

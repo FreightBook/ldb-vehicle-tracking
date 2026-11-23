@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import CityAutocomplete from './CityAutocomplete';
 import { estimateRouteDays } from '../utils/indianCities';
+import { formatPollInterval } from '../utils/formatters';
 
 function addDaysToDateString(dateStr, days) {
   if (!dateStr) return '';
@@ -35,7 +36,7 @@ function calculateDateDiffDays(startDateStr, endDateStr) {
   return Math.round((end - start) / (1000 * 60 * 60 * 24));
 }
 
-export default function NewTripModal({ isOpen, onClose, onSubmitSuccess, pollInterval = 1800 }) {
+export default function NewTripModal({ isOpen, onClose, onSubmitSuccess, pollInterval = 10800 }) {
   const todayStr = new Date().toISOString().split('T')[0];
 
   const [vehicleNumber, setVehicleNumber] = useState('');
@@ -166,7 +167,7 @@ export default function NewTripModal({ isOpen, onClose, onSubmitSuccess, pollInt
             <div className="min-w-0">
               <h2 className="text-sm sm:text-base font-bold text-white truncate leading-tight">Register Vehicle Trip</h2>
               <p className="text-[11px] sm:text-xs text-gray-300 truncate">
-                Start {pollInterval >= 60 ? `${Math.round(pollInterval / 60)}m` : `${pollInterval}s`} automated LDB toll tracking
+                Start {formatPollInterval(pollInterval)} automated LDB toll tracking
               </p>
             </div>
           </div>
@@ -420,7 +421,7 @@ export default function NewTripModal({ isOpen, onClose, onSubmitSuccess, pollInt
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-1.5 text-[10.5px] leading-relaxed text-slate-600">
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-500 flex-shrink-0" />
-                  <span>Polls LDB every {pollInterval >= 60 ? `${Math.round(pollInterval / 60)}m` : `${pollInterval}s`} while active</span>
+                  <span>Polls LDB every {formatPollInterval(pollInterval)} while active</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-500 flex-shrink-0" />

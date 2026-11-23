@@ -229,8 +229,9 @@ async function cleanupOldTripsAndOrphans() {
  * Start the background cron jobs
  */
 function startTrackingScheduler() {
-  const intervalSec = parseInt(process.env.POLL_INTERVAL_SECONDS || '1800', 10);
-  console.log(`[Scheduler] Initialized. Polling interval: ${intervalSec} seconds (${Math.round(intervalSec / 60)} minutes).`);
+  const intervalSec = parseInt(process.env.POLL_INTERVAL_SECONDS || '10800', 10);
+  const intervalHours = (intervalSec / 3600).toFixed(intervalSec % 3600 === 0 ? 0 : 1);
+  console.log(`[Scheduler] Initialized. Polling interval: ${intervalSec} seconds (${intervalHours} hours).`);
 
   // Interval timer runs every intervalSec seconds
   setInterval(() => {

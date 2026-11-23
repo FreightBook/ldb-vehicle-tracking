@@ -26,7 +26,7 @@ export default function App() {
   const [selectedTripEvents, setSelectedTripEvents] = useState([]);
   const [activeCount, setActiveCount] = useState(0);
   const [pastCount, setPastCount] = useState(0);
-  const [pollInterval, setPollInterval] = useState(1800);
+  const [pollInterval, setPollInterval] = useState(10800);
   const [isNewTripModalOpen, setIsNewTripModalOpen] = useState(false);
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
   const [isPolling, setIsPolling] = useState(false);

@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Truck, FileDown, ArrowUp } from 'lucide-react';
 import { exportTruckReportToPdf } from '../utils/pdfExport';
+import { formatPollInterval } from '../utils/formatters';
 
 /**
  * Format event time into DD-MM-YYYY HH:mm:ss IST
@@ -36,7 +37,7 @@ export default function TollTimelineModal({
   onClose,
   trip,
   events = [],
-  pollInterval = 1800,
+  pollInterval = 10800,
 }) {
   if (!isOpen || !trip) return null;
 
@@ -122,7 +123,7 @@ export default function TollTimelineModal({
                 No toll crossing events recorded yet for this trip.
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                The {pollInterval >= 60 ? `${Math.round(pollInterval / 60)}m` : `${pollInterval}s`} crawler will automatically record toll plazas as the truck progresses.
+                The {formatPollInterval(pollInterval)} crawler will automatically record toll plazas as the truck progresses.
               </p>
             </div>
           ) : (
