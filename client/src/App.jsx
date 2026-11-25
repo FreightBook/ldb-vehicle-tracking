@@ -4,6 +4,7 @@ import LeafletMapView from './components/LeafletMapView';
 import NewTripModal from './components/NewTripModal';
 import TollTimelineModal from './components/TollTimelineModal';
 import PasscodeGate from './components/PasscodeGate';
+import InstallPwaPrompt from './components/InstallPwaPrompt';
 import {
   fetchTrips,
   fetchTripDetails,
@@ -209,7 +210,12 @@ export default function App() {
   };
 
   if (!isAuthorized) {
-    return <PasscodeGate onAuthorized={() => setIsAuthorized(true)} />;
+    return (
+      <>
+        <PasscodeGate onAuthorized={() => setIsAuthorized(true)} />
+        <InstallPwaPrompt />
+      </>
+    );
   }
 
   return (
@@ -284,6 +290,9 @@ export default function App() {
         events={selectedTripEvents}
         pollInterval={pollInterval}
       />
+
+      {/* PWA 30s Install Prompt */}
+      <InstallPwaPrompt />
     </div>
   );
 }

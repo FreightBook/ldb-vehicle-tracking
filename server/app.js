@@ -96,8 +96,12 @@ app.use(
     maxAge: '1y',
     immutable: true,
     setHeaders: (res, filePath) => {
-      // Never cache index.html so updates to new JS/CSS bundle hashes take effect immediately
-      if (filePath.endsWith('index.html')) {
+      // Never cache index.html, sw.js, or manifest.json so updates take effect immediately
+      if (
+        filePath.endsWith('index.html') ||
+        filePath.endsWith('sw.js') ||
+        filePath.endsWith('manifest.json')
+      ) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       }
     },
